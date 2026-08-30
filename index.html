@@ -1,0 +1,1303 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#9a7638">
+<title>פנקס הכנסות והוצאות</title>
+
+<meta name="theme-color" content="#f3ecd9">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="פנקס הכנסות">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+
+<!-- גרסה 2.3: ללא תקציב מול ביצוע + חודשים ושנים קדימה -->
+<style>
+:root{--bg:#f3ecd9;--card:#fbf7ec;--text:#172033;--muted:#697386;--primary:#9a7638;--line:#ddd2b7;--good:#12805c;--bad:#d92d20}
+*{box-sizing:border-box}html,body{width:100%;max-width:100%;overflow-x:hidden}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,"Noto Sans Hebrew",sans-serif}
+header{background:var(--primary);color:white;padding:calc(14px + env(safe-area-inset-top)) 16px 14px;position:sticky;top:0;z-index:10}
+h1{font-size:22px;margin:0 0 12px}.top{display:flex;gap:7px;overflow:auto}.top button{white-space:nowrap}
+button{border:0;border-radius:10px;padding:10px 13px;font-weight:700;cursor:pointer}.top button{background:#fbf7ec;color:#2146c8}
+main{width:100%;max-width:1050px;margin:0 auto;padding:12px 12px 80px;overflow-x:hidden}.view{display:none}.view.active{display:block}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}.label{color:var(--muted);font-size:13px}.num{font-size:21px;font-weight:800;margin-top:7px}
+.good{color:var(--good)}.bad{color:var(--bad)}.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px;margin-top:12px}
+.panel h2{font-size:18px;margin:0 0 12px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+input,select{width:100%;padding:11px;border:1px solid #cfd5df;border-radius:9px;font-size:15px;background:#fbf7ec;color:var(--text)}.wide{grid-column:1/-1}.primary{background:var(--primary);color:white}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row>*{flex:1}.row button{flex:0 0 auto}
+.table{overflow:auto}table{width:100%;border-collapse:collapse;min-width:650px}th,td{text-align:right;padding:9px;border-bottom:1px solid var(--line)}th{background:#f6efdd}
+.month{max-width:190px}.progress{height:9px;background:#e9edf4;border-radius:10px;overflow:hidden}.progress i{display:block;height:100%;background:var(--primary)}
+.bargraph{height:230px;display:flex;align-items:end;gap:5px;border-bottom:1px solid var(--line);overflow-x:auto;padding:8px}.barcol{min-width:38px;height:210px;display:flex;align-items:center;flex-direction:column;justify-content:end}.bars{height:180px;display:flex;align-items:end;gap:3px}.bi,.bo{width:15px;border-radius:4px 4px 0 0}.bi{background:#54b584}.bo{background:#ed7770}.barcol small{font-size:10px;margin-top:3px}
+.cat{display:grid;grid-template-columns:1fr 70px;gap:7px;align-items:center;margin:7px 0}.cat button{padding:7px;background:#fee4e2;color:#b42318}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.muted{color:var(--muted);font-size:13px}.danger{background:#fee4e2;color:#b42318}.secondary{background:#eef2ff;color:#29439a}
+@media(max-width:760px){.cards{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr 1fr}.two{grid-template-columns:1fr}}
+@media(max-width:450px){.grid{grid-template-columns:1fr}.cards .card{padding:11px}.num{font-size:18px}}
+
+.date-nav{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);border-radius:14px;padding:10px;margin-bottom:12px;color:#fff}
+.date-nav-row{display:flex;align-items:flex-start;justify-content:center;gap:18px;flex-wrap:nowrap}
+.date-block{display:flex;align-items:center;gap:7px}
+.date-block label{font-weight:700}
+.date-block input{width:110px;text-align:center;font-weight:700}
+.nav-arrow{background:var(--primary);color:#fff;width:42px;height:42px;padding:0;font-size:22px;line-height:42px}
+@media(max-width:450px){.date-nav-row{gap:10px}.date-block input{width:78px}.date-block label{font-size:14px}}
+
+
+.tx-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-left:7px;vertical-align:middle}
+.tx-dot.income{background:#16a34a}.tx-dot.expense{background:#dc2626}
+.trash-btn{background:transparent;padding:4px 7px;font-size:16px;border-radius:7px}
+.trash-btn:hover{background:#f2f4f7}
+.seq{font-weight:700;color:var(--muted)}
+
+/* טבלת התנועות במסך הראשי – מותאמת לרוחב טלפון */
+.home-tx-table{min-width:0!important;width:100%;table-layout:auto}
+.home-tx-table th,.home-tx-table td{padding:5px 1px;font-size:inherit;white-space:nowrap}
+.home-tx-table th:nth-child(1),.home-tx-table td:nth-child(1){width:1%;text-align:center;padding-left:3px;padding-right:3px}
+.home-tx-table th:nth-child(2),.home-tx-table td:nth-child(2){width:52%;max-width:18ch;padding-right:1px;padding-left:1px;white-space:normal;line-height:1.15}
+.home-tx-table th:nth-child(3),.home-tx-table td:nth-child(3){width:1%;text-align:right;padding-right:1px;padding-left:1px}
+.home-tx-table th:nth-child(4),.home-tx-table td:nth-child(4){width:1%;text-align:center;padding:0 2px}
+.home-tx-table .trash-btn{display:inline-block!important;padding:1px 3px!important;font-size:17px!important;color:#d92d20!important;background:transparent!important;border:0!important;line-height:1;border-radius:4px}
+.home-tx-table .tx-dot{width:9px;height:9px;margin-left:2px}
+@media(max-width:450px){
+  .home-tx-table th,.home-tx-table td{padding:5px 1px}
+  .home-tx-table th:nth-child(1),.home-tx-table td:nth-child(1){width:1%;padding-left:2px;padding-right:2px}
+  .home-tx-table th:nth-child(2),.home-tx-table td:nth-child(2){width:52%;max-width:18ch;padding-right:1px;padding-left:1px;white-space:normal;line-height:1.15}
+  .home-tx-table th:nth-child(3),.home-tx-table td:nth-child(3){width:1%;padding-right:2px;padding-left:2px}
+  .home-tx-table th:nth-child(4),.home-tx-table td:nth-child(4){width:1%;padding:0 2px}
+}
+
+
+.home-tx-scroll{
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  height:238px!important;
+  max-height:238px!important;
+  min-height:0!important;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  touch-action:pan-y;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+.home-tx-scroll .home-tx-table{margin:0}
+.home-tx-scroll thead th{
+  position:sticky;
+  top:0;
+  z-index:2;
+  background:#f6efdd;
+}
+.home-tx-table tbody tr{height:39px}
+.home-tx-table tbody td{height:39px;vertical-align:middle}
+#home{overflow:visible!important}
+#home .panel{overflow:visible!important}
+@media(max-width:450px){
+  .home-tx-scroll{
+    height:230px!important;
+    max-height:230px!important;
+  }
+}
+
+.month-action-row{
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  align-items:center;
+  gap:8px;
+  margin-bottom:10px;
+}
+.month-title-box{
+  min-width:120px;
+  padding:10px 14px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:#f6efdd;
+  font-size:18px;
+  font-weight:800;
+  text-align:center;
+  white-space:nowrap;
+}
+.month-action-btn{
+  padding:7px 11px!important;
+  min-height:35px!important;
+  border-radius:9px!important;
+  font-size:15px!important;
+  line-height:1.1!important;
+  white-space:nowrap;
+}
+.income-btn{justify-self:end}
+.expense-btn{justify-self:start}
+@media(max-width:450px){
+  .month-action-row{gap:5px}
+  .month-title-box{min-width:105px;padding:9px 10px;font-size:16px}
+  .month-action-btn{padding:7px 9px!important;font-size:14px!important;min-height:34px!important}
+}
+
+
+.month-action-btn{
+  width:38px!important;
+  height:38px!important;
+  min-width:38px!important;
+  min-height:38px!important;
+  padding:0!important;
+  font-size:26px!important;
+  font-weight:800!important;
+  background:#fbf7ec!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+}
+.month-action-btn.income-btn{color:#12805c!important;border:2px solid #12805c!important}
+.month-action-btn.expense-btn{color:#d92d20!important;border:2px solid #d92d20!important}
+@media(max-width:450px){
+  .month-action-btn{
+    width:36px!important;
+    height:36px!important;
+    min-width:36px!important;
+    min-height:36px!important;
+    padding:0!important;
+    font-size:24px!important;
+  }
+}
+
+
+.month-action-btn{
+  width:32px!important;
+  height:32px!important;
+  min-width:32px!important;
+  min-height:32px!important;
+  font-size:21px!important;
+}
+@media(max-width:450px){
+  .month-action-btn{
+    width:31px!important;
+    height:31px!important;
+    min-width:31px!important;
+    min-height:31px!important;
+    font-size:20px!important;
+  }
+}
+
+
+.month-only-row{display:flex!important;justify-content:center!important}
+.home-filter-row{display:flex!important;align-items:center!important;gap:6px!important;flex-wrap:nowrap!important}
+.home-filter-row .month-action-btn{flex:0 0 auto!important}
+@media(max-width:450px){
+  .home-filter-row{gap:4px!important}
+  .home-filter-row > button:not(.month-action-btn){padding-left:8px!important;padding-right:8px!important}
+}
+
+
+.home-filter-row .income-btn{margin-left:5px!important}
+.home-filter-row .expense-btn{margin-right:5px!important}
+
+
+.home-filter-row .income-btn{margin-left:16px!important}
+.home-filter-row .expense-btn{margin-right:16px!important}
+@media(max-width:450px){
+  .home-filter-row .income-btn{margin-left:15px!important}
+  .home-filter-row .expense-btn{margin-right:15px!important}
+}
+
+
+.home-filter-row .income-btn{margin-right:32px!important}
+@media(max-width:450px){
+  .home-filter-row .income-btn{margin-right:31px!important}
+}
+
+
+/* ===== Print / screen reports ===== */
+.report-modal{
+  position:fixed; inset:0; z-index:9999;
+  background:rgba(15,23,42,.45);
+  display:none; align-items:center; justify-content:center;
+  padding:16px;
+}
+.report-modal.open{display:flex}
+.report-dialog{
+  width:min(980px,96vw); max-height:92vh; overflow:auto;
+  background:#fbf7ec; border-radius:16px; padding:18px;
+  box-shadow:0 24px 60px rgba(0,0,0,.25);
+  direction:rtl;
+}
+.report-dialog h2,.report-dialog h3{text-align:center;margin:4px 0 14px}
+.report-choice{
+  display:grid; grid-template-columns:1fr 1fr; gap:14px;
+  max-width:560px; margin:16px auto;
+}
+.report-choice button{
+  min-height:74px; font-size:20px; font-weight:800;
+  border-radius:14px; border:2px solid #2146c8; background:#fbf7ec; color:#2146c8;
+}
+.report-list{display:grid;gap:12px}
+.report-list button{
+  text-align:right; padding:14px 16px; border-radius:12px;
+  border:1px solid #cbd5e1; background:#f6efdd; font-weight:800; font-size:16px;
+}
+.report-controls{
+  display:flex; gap:12px; flex-wrap:wrap; align-items:end; justify-content:center;
+  margin:10px 0 16px;
+}
+.report-controls label{font-weight:700}
+.report-controls input{
+  display:block; margin-top:4px; width:120px; padding:8px;
+  border:1px solid #cbd5e1; border-radius:8px; text-align:center;
+}
+.report-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:14px 0}
+.report-actions button{padding:9px 15px;border-radius:9px;border:1px solid #cbd5e1;background:#fbf7ec;font-weight:700}
+.report-actions .primary-print{background:#2146c8;color:#fff;border-color:#2146c8}
+.report-output{margin-top:12px}
+.report-output .report-title{text-align:center;font-size:22px;font-weight:900;margin:10px 0 4px}
+.report-output .report-subtitle{text-align:center;margin-bottom:12px;color:#475569}
+.report-output table{width:100%;border-collapse:collapse;font-size:14px}
+.report-output th,.report-output td{border:1px solid #cbd5e1;padding:6px;text-align:center}
+.report-output th{background:#f1f5f9}
+.report-output td.cat{text-align:right;font-weight:700;white-space:normal}
+.report-output .income-amount{color:#12805c;font-weight:700}
+.report-output .expense-amount{color:#d92d20;font-weight:700}
+.report-output .total-row{font-weight:900;background:#f6efdd}
+.report-scroll{overflow:auto;max-width:100%}
+.close-x{float:left;border:0;background:transparent;font-size:24px;cursor:pointer}
+@media(max-width:600px){
+  .report-choice{grid-template-columns:1fr}
+  .report-dialog{padding:12px}
+  .report-output table{font-size:12px}
+  .report-output th,.report-output td{padding:4px}
+}
+@media print{
+  body.printing-report > *:not(#printModal){display:none!important}
+  body.printing-report #printModal{
+    position:static!important; display:block!important; background:#fbf7ec!important; padding:0!important;
+  }
+  body.printing-report #printModal .report-dialog{
+    width:100%!important; max-height:none!important; overflow:visible!important;
+    box-shadow:none!important; padding:0!important;
+  }
+  body.printing-report #printModal .no-print{display:none!important}
+  body.printing-report #printModal .report-output{display:block!important}
+  body.printing-report #printModal .report-scroll{overflow:visible!important}
+  body.printing-report #printModal table{font-size:10pt}
+  @page{size:auto;margin:10mm}
+}
+
+
+.report1-table{
+  width:100%!important;
+  min-width:0!important;
+  table-layout:fixed!important;
+}
+.report1-table th,.report1-table td{
+  padding:5px 2px!important;
+  white-space:nowrap;
+}
+.report1-table th:nth-child(1),.report1-table td:nth-child(1){
+  width:18%!important;
+  text-align:center!important;
+}
+.report1-table th:nth-child(2),.report1-table td:nth-child(2){
+  width:52%!important;
+  text-align:right!important;
+  white-space:normal!important;
+  line-height:1.15!important;
+}
+.report1-table th:nth-child(3),.report1-table td:nth-child(3){
+  width:30%!important;
+  text-align:right!important;
+}
+@media(max-width:450px){
+  .report1-table{font-size:12px!important}
+  .report1-table th,.report1-table td{padding:4px 1px!important}
+  .report1-table th:nth-child(1),.report1-table td:nth-child(1){width:16%!important}
+  .report1-table th:nth-child(2),.report1-table td:nth-child(2){width:54%!important}
+  .report1-table th:nth-child(3),.report1-table td:nth-child(3){width:30%!important}
+}
+
+
+.home-summary-new{display:flex;flex-direction:column;gap:10px;width:100%}
+.home-summary-new .balance-wide{width:100%;box-sizing:border-box;text-align:center}
+.home-summary-bottom{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
+.home-summary-bottom .card{width:100%;box-sizing:border-box;text-align:center}
+
+
+.backup-status{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  font-size:14px;
+  line-height:16px;
+  font-weight:600;
+  color:#64748b;
+  margin:3px auto -3px;
+  min-height:22px;
+  height:22px;
+  transform:translateY(3px);
+}
+
+
+.backup-toast{
+  position:fixed;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%) scale(.96);
+  z-index:99999;
+  background:#fbf7ec;
+  color:#0f172a;
+  border:1px solid #cbd5e1;
+  border-radius:14px;
+  box-shadow:0 12px 35px rgba(15,23,42,.25);
+  padding:18px 24px;
+  min-width:260px;
+  max-width:88vw;
+  text-align:center;
+  direction:rtl;
+  opacity:0;
+  visibility:hidden;
+  transition:opacity .18s ease,transform .18s ease,visibility .18s;
+}
+.backup-toast.show{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
+.backup-toast-title{font-weight:800;font-size:18px;margin-bottom:7px}
+
+
+/* Version 40: unified warm background */
+header,.topbar,.app-header,.hero,.head{
+  background:#f3ecd9!important;
+  color:#4f3b18!important;
+}
+header h1,.topbar h1,.app-header h1,.hero h1,.head h1,
+header label,.topbar label,.app-header label,.hero label,.head label{
+  color:#4f3b18!important;
+}
+body{background:#f3ecd9!important}
+
+
+/* Version 41: unified readable text size, main title unchanged */
+body{font-size:16px}
+button,input,select,.label,.muted,.date-block label,
+.panel h2,.month-title-box,.month-action-btn,
+.report-param,.report-controls,.report-output,
+.home-tx-table th,.home-tx-table td{
+  font-size:16px!important;
+}
+h1{font-size:22px!important}
+.num{font-size:21px!important}
+.home-tx-table .trash-btn{font-size:17px!important}
+
+
+/* Version 42: compact vertical spacing after larger text */
+.backup-status{
+  font-size:14px!important;
+  line-height:15px!important;
+  min-height:17px!important;
+  height:17px!important;
+  margin:0 auto!important;
+  transform:none!important;
+}
+.date-nav{
+  padding:6px!important;
+  margin-bottom:6px!important;
+}
+.nav-arrow{
+  width:34px!important;
+  height:34px!important;
+  min-width:34px!important;
+  min-height:34px!important;
+  padding:0!important;
+  font-size:18px!important;
+  line-height:34px!important;
+}
+.date-nav-row{align-items:center!important;gap:8px!important}
+.home-summary-new{gap:6px!important}
+.home-summary-bottom{gap:6px!important}
+.home-summary-new .card{padding:8px!important}
+
+
+/* Version 43: small separation below arrow/date controls */
+.date-nav{
+  margin-bottom:10px!important;
+}
+.home-summary-new{
+  margin-top:7px!important;
+}
+
+
+/* Version 44: separate date arrows from dashboard row */
+.date-nav{
+  border:none!important;
+  padding:4px 6px 6px!important;
+  margin-bottom:9px!important;
+}
+.top{
+  margin-top:0!important;
+  padding-top:0!important;
+}
+
+
+/* Version 45: show exactly one full transaction row on dashboard */
+.home-tx-scroll{
+  height:79px!important;
+  max-height:79px!important;
+  overflow-y:auto!important;
+}
+@media(max-width:450px){
+  .home-tx-scroll{
+    height:79px!important;
+    max-height:79px!important;
+  }
+}
+
+
+/* Version 46: hide the gray horizontal scrollbar under the top dashboard buttons */
+.top{
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  scrollbar-width:none!important;
+  -ms-overflow-style:none!important;
+}
+.top::-webkit-scrollbar{
+  display:none!important;
+  width:0!important;
+  height:0!important;
+}
+
+
+/* Version 47: remove the tiny gray line at the upper-left edge of the transaction table */
+.home-tx-scroll{
+  border-top:none!important;
+  border-bottom:none!important;
+}
+.home-tx-table,
+.home-tx-table thead,
+.home-tx-table thead tr,
+.home-tx-table thead th{
+  border-top:none!important;
+}
+.home-tx-table thead th:first-child,
+.home-tx-table thead th:last-child{
+  box-shadow:none!important;
+}
+
+
+/* Version 48: hide the transaction list scrollbar visually, keep touch/mouse scrolling */
+.home-tx-scroll{
+  scrollbar-width:none!important;
+  -ms-overflow-style:none!important;
+}
+.home-tx-scroll::-webkit-scrollbar{
+  display:none!important;
+  width:0!important;
+  height:0!important;
+}
+
+
+/* Version 49: restore the original transaction-list height */
+.home-tx-scroll{
+  height:238px!important;
+  max-height:238px!important;
+}
+@media(max-width:450px){
+  .home-tx-scroll{
+    height:230px!important;
+    max-height:230px!important;
+  }
+}
+
+
+.entry-period{
+  text-align:center!important;
+  font-weight:700!important;
+  background:#f6efdd!important;
+  color:#4f3b18!important;
+  cursor:default!important;
+}
+
+
+.entry-actions{
+  display:grid!important;
+  grid-template-columns:3fr 1fr!important;
+  gap:10px!important;
+  align-items:stretch!important;
+}
+.entry-actions button{
+  width:100%!important;
+  min-width:0!important;
+}
+.entry-cancel{
+  background:transparent!important;
+  color:#697386!important;
+  border:1px solid #ddd2b7!important;
+  font-weight:700!important;
+  box-shadow:none!important;
+}
+.entry-cancel:hover,
+.entry-cancel:focus{
+  background:transparent!important;
+  color:#4f3b18!important;
+}
+@media(max-width:450px){
+  .entry-actions{
+    grid-template-columns:3fr 1fr!important;
+    gap:8px!important;
+  }
+}
+
+
+#localFileNotice{
+  display:none;
+  margin:8px auto 0;
+  max-width:760px;
+  padding:9px 12px;
+  border:1px solid #ddd2b7;
+  border-radius:10px;
+  background:#fbf7ec;
+  color:#697386;
+  font-size:14px;
+  text-align:center;
+}
+
+</style>
+</head>
+<body>
+<header>
+<h1>פנקס הכנסות והוצאות</h1>
+<div class="date-nav">
+  <div class="date-nav-row">
+    <div class="date-block" style="flex-direction:column">
+      <div style="display:flex;align-items:center;gap:7px">
+        <label for="manualYear">שנה</label>
+        <input id="manualYear" type="number" min="1900" max="2100" onchange="applyManualDate()">
+      </div>
+      <button class="nav-arrow" onclick="prevMonth()" aria-label="חודש קודם">←</button>
+    </div>
+    <div class="date-block" style="flex-direction:column">
+      <div style="display:flex;align-items:center;gap:7px">
+        <label for="manualMonth">חודש</label>
+        <input id="manualMonth" type="number" min="1" max="12" onchange="applyManualDate()">
+      </div>
+      <button class="nav-arrow" onclick="nextMonth()" aria-label="חודש הבא">→</button>
+    </div>
+  </div>
+</div>
+<div class="top"><button onclick="view('home')">🏠 לוח הבקרה</button><button onclick="view('cats')">⚙️ קטגוריות</button><button onclick="openPrintChoice()">🖨️ הדפסה</button><button onclick="backup()">💾 גיבוי</button><label style="background:#fbf7ec;color:#2146c8;padding:10px 13px;border-radius:10px;font-weight:bold;cursor:pointer">📥 שחזור<input id="restore" type="file" accept=".json" hidden onchange="restoreData(event)"></label></div>
+</header>
+<div id="localFileNotice">גרסה זו מיועדת להפעלה מכתובת אינטרנט קבועה. לאחר ההעלאה לאתר, הנתונים יישמרו תחת אותה כתובת גם כאשר מעדכנים את התוכנית.</div>
+<div id="lastBackupStatus" class="backup-status"></div><main>
+<section id="home" class="view active">
+<select id="homeMonth" style="display:none"></select>
+
+<div class="home-summary-new" style="margin-top:3px">
+  <div class="card balance-wide"><div class="label">יתרה</div><div id="hb" class="num"></div></div>
+  <div class="home-summary-bottom">
+    <div class="card"><div class="label">הכנסות</div><div id="hi" class="num good"></div></div>
+    <div class="card"><div class="label">הוצאות</div><div id="he" class="num bad"></div></div>
+  </div>
+  <div id="hr" style="display:none"></div>
+</div></div>
+<div class="panel">
+<div class="month-action-row month-only-row">
+  <div id="homeSelectedMonth" class="month-title-box">החודש הנבחר</div>
+</div>
+<div class="row home-filter-row" style="margin-bottom:10px">
+  <button onclick="setHomeFilter('')" id="homeFilterAll">הכל</button>
+  <button onclick="setHomeFilter('income')" id="homeFilterIncome">הכנסות</button>
+  <button onclick="setHomeFilter('expense')" id="homeFilterExpense">הוצאות</button>
+  <button class="month-action-btn expense-btn" onclick="view('expense')" aria-label="הוספת הוצאה">−</button>
+  <button class="month-action-btn income-btn" onclick="view('income')" aria-label="הוספת הכנסה">＋</button>
+</div>
+<div class="table home-tx-scroll">
+<table class="home-tx-table">
+<thead><tr><th>מס׳</th><th>קטגוריה</th><th>סכום</th><th></th></tr></thead>
+<tbody id="homeTxBody"></tbody>
+</table>
+</div>
+</div>
+</section>
+
+<section id="income" class="view"><div class="panel"><h2>＋ הוספת הכנסה</h2><form class="grid entry-form" onsubmit="addTx(event,'income')"><input id="incomeAmount" type="number" min="0" step=".01" placeholder="סכום הכנסה ₪" required><select id="incomeCat" required></select><input id="incomePeriod" class="wide entry-period" type="text" readonly aria-label="חודש ושנה"><input id="incomeDesc" class="wide" placeholder="הערה"><div class="entry-actions wide"><button class="primary entry-submit" type="submit">＋ הוסף הכנסה</button><button class="entry-cancel" type="button" onclick="cancelEntry('income')">ביטול</button></div></form></div><div class="panel"><h2>הכנסות</h2><div class="row"><select id="incomeMonth" class="month" onchange="renderList('income')"></select><input id="incomeSearch" placeholder="חיפוש..." oninput="renderList('income')"></div><div class="table"><table><thead><tr><th>תאריך</th><th>קטגוריה</th><th>תיאור</th><th>סכום</th><th></th></tr></thead><tbody id="incomeBody"></tbody></table></div></div></section>
+<section id="expense" class="view"><div class="panel"><h2>− הוספת הוצאה</h2><form class="grid entry-form" onsubmit="addTx(event,'expense')"><input id="expenseAmount" type="number" min="0" step=".01" placeholder="סכום הוצאה ₪" required><select id="expenseCat" required></select><input id="expensePeriod" class="wide entry-period" type="text" readonly aria-label="חודש ושנה"><input id="expenseDesc" class="wide" placeholder="הערה"><div class="entry-actions wide"><button class="primary entry-submit" type="submit">− הוסף הוצאה</button><button class="entry-cancel" type="button" onclick="cancelEntry('expense')">ביטול</button></div></form></div><div class="panel"><h2>הוצאות</h2><div class="row"><select id="expenseMonth" class="month" onchange="renderList('expense')"></select><input id="expenseSearch" placeholder="חיפוש..." oninput="renderList('expense')"></div><div class="table"><table><thead><tr><th>תאריך</th><th>קטגוריה</th><th>תיאור</th><th>סכום</th><th></th></tr></thead><tbody id="expenseBody"></tbody></table></div></div></section>
+<section id="cats" class="view"><div class="two"><div class="panel"><h2>הכנסות — עד 10</h2><div id="incomeCats"></div><button class="primary" onclick="addCat('income')">➕ הוסף</button></div><div class="panel"><h2>הוצאות — עד 29</h2><div id="expenseCats"></div><button class="primary" onclick="addCat('expense')">➕ הוסף</button></div></div></section>
+
+<section id="reports" class="view">
+<div class="panel">
+<h2>📅 סיכום שנתי – 20 שנה אחורה</h2>
+<p class="muted">מוצגות כל השנים שבהן קיימים נתונים, עד 20 שנה אחורה.</p>
+<div class="cards" style="margin-bottom:12px">
+  <div class="card"><div class="label">סה״כ יתרה</div><div id="allYearsBalance" class="num">₪0</div></div>
+  <div class="card"><div class="label">סה״כ הוצאות</div><div id="allYearsExpense" class="num bad">₪0</div></div>
+  <div class="card"><div class="label">סה״כ הכנסות</div><div id="allYearsIncome" class="num good">₪0</div></div>
+</div>
+<div class="table">
+<table>
+<thead>
+<tr><th style="font-size:16px;font-weight:800">שנה</th><th>סה״כ הכנסות</th><th>סה״כ הוצאות</th><th>סה״כ יתרה</th></tr>
+</thead>
+<tbody id="yearlyReport"></tbody>
+<tfoot id="yearlyFoot"></tfoot>
+</table>
+</div>
+</div>
+
+<div class="panel">
+<h2>12 חודשים</h2>
+<div class="row">
+  <select id="reportMonth" class="month" onchange="renderMonthlyReport()"></select>
+  <select id="reportFilter" onchange="renderMonthlyReport()">
+    <option value="">הכל</option>
+    <option value="income">הכנסות</option>
+    <option value="expense">הוצאות</option>
+  </select>
+</div>
+
+<div class="cards" style="margin-top:12px;margin-bottom:12px">
+  <div class="card"><div class="label">הכנסות בחודש</div><div id="rmIncome" class="num good">₪0</div></div>
+  <div class="card"><div class="label">הוצאות בחודש</div><div id="rmExpense" class="num bad">₪0</div></div>
+  <div class="card"><div class="label">יתרה בחודש</div><div id="rmBalance" class="num">₪0</div></div>
+</div>
+
+<div class="table">
+<table>
+<thead>
+<tr><th>תאריך</th><th>סוג</th><th>קטגוריה</th><th>תיאור</th><th>סכום</th></tr>
+</thead>
+<tbody id="monthlyTxBody"></tbody>
+</table>
+</div>
+</div>
+</section>
+
+<div id="printModal" class="report-modal" role="dialog" aria-modal="true" aria-label="הדפסה ודוחות">
+  <div class="report-dialog">
+    <button class="close-x no-print" onclick="closePrintModal()" aria-label="סגירה">✕</button>
+    <div id="printStepChoice" class="no-print">
+      <h2>הדפסה</h2>
+      <div class="report-choice">
+        <button onclick="chooseReportDestination('screen')">🖥️ הדפסה למסך</button>
+        <button onclick="chooseReportDestination('printer')">🖨️ הדפסה למדפסת</button>
+      </div>
+    </div>
+
+    <div id="printStepReports" class="no-print" style="display:none">
+      <h2 id="destinationTitle">בחר דוח</h2>
+      <div class="report-list">
+        <button onclick="selectPrintReport(1)">1. רשימת הכנסות והוצאות ממוספרת לפי חודש ושנה</button>
+        <button onclick="selectPrintReport(2)">2. טבלת קטגוריות הוצאות מסוכמת — 12 חודשי השנה</button>
+        <button onclick="selectPrintReport(3)">3. טבלת קטגוריות הוצאות מסוכמת — 12 שנים</button>
+        <button onclick="selectPrintReport(4)">4. סיכום הכנסות, הוצאות ויתרה — 12 חודשים</button>
+        <button onclick="selectPrintReport(5)">5. סיכום הכנסות, הוצאות ויתרה — 12 שנים</button>
+      </div>
+      <div class="report-actions">
+        <button onclick="backToDestination()">חזרה</button>
+      </div>
+    </div>
+
+    <div id="printStepParams" style="display:none">
+      <div id="reportParams" class="no-print"></div>
+      <div class="report-actions no-print">
+        <button onclick="backToReportList()">חזרה לרשימת הדוחות</button>
+        <button class="primary-print" onclick="runSelectedReport()" id="runReportBtn">הצג למסך</button>
+      </div>
+      <div id="reportOutput" class="report-output"></div>
+    </div>
+  </div>
+</div>
+
+</main>
+<script>
+const KEY='home_budget_pro_v3_categories';
+let selectedYear=new Date().getFullYear();
+let selectedMonth=new Date().getMonth()+1;
+
+function syncManualInputs(){
+  document.getElementById('manualYear').value=selectedYear;
+  document.getElementById('manualMonth').value=selectedMonth;
+}
+function selectedYM(){
+  return `${selectedYear}-${String(selectedMonth).padStart(2,'0')}`;
+}
+function applyManualDate(){
+  let y=parseInt(document.getElementById('manualYear').value,10);
+  let m=parseInt(document.getElementById('manualMonth').value,10);
+  if(!Number.isFinite(y)) y=new Date().getFullYear();
+  if(!Number.isFinite(m)) m=1;
+  m=Math.max(1,Math.min(12,m));
+  selectedYear=y;
+  selectedMonth=m;
+  syncManualInputs();
+  refreshSelectedPeriod();
+}
+function nextMonth(){
+  if(selectedMonth===12){selectedMonth=1;selectedYear+=1;}
+  else selectedMonth+=1;
+  syncManualInputs();
+  refreshSelectedPeriod();
+}
+function prevMonth(){
+  if(selectedMonth===1){selectedMonth=12;selectedYear-=1;}
+  else selectedMonth-=1;
+  syncManualInputs();
+  refreshSelectedPeriod();
+}
+function refreshSelectedPeriod(){
+  const ym=selectedYM();
+  ['homeMonth','incomeMonth','expenseMonth','reportMonth'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    let opt=[...el.options].find(o=>o.value===ym);
+    if(!opt){
+      opt=document.createElement('option');
+      opt.value=ym; opt.textContent=ml(ym);
+      el.appendChild(opt);
+    }
+    el.value=ym;
+  });
+  const periodText=`${String(selectedMonth).padStart(2,'0')}/${selectedYear}`;
+  const ip=document.getElementById('incomePeriod');
+  const ep=document.getElementById('expensePeriod');
+  if(ip) ip.value=periodText;
+  if(ep) ep.value=periodText;
+  renderHome();
+  renderList('income');
+  renderList('expense');
+  renderMonthlyReport();
+}
+
+const inc=["משכורת בעל", "משכורת אשה", "ביטוח לאומי", "שונות", "בנות", "נכדים"];
+const exp=["מועצה מיסים", "רגבה מיסים", "חשמל", "טלפון", "פלאפון", "גז", "מים", "כבלים", "נטפליקס", "עיתונים", "תמי 4", "רכב", "דלק", "תרופות", "רפואה", "קופת חולים", "ביטוח בריאות", "ביטוח דירה רגבה", "אירוח, חוגים והובי", "דברי מכולת", "ביגוד ושונות בעל", "ביגוד ושונות אשה", "ילדים", "נכדים", "הוצאות בית רגבה", "חתולים", "גינון", "רכישות וקניות לבית", "שונות"];
+let d=JSON.parse(localStorage.getItem(KEY)||'null')||{incomeCats:inc.map(n=>({name:n,budget:0})),expenseCats:exp.map(n=>({name:n,budget:0})),tx:[]};
+// Version 50: one-time replacement of August 2026 with the imported ledger data.
+(function importAugust2026Once(){
+  const MIGRATION_KEY='home_budget_august_2026_import_v50';
+  if(localStorage.getItem(MIGRATION_KEY)==='done') return;
+  const imported=[{"id":1786346361584,"type":"income","date":"2026-08-01","category":"משכורת בעל","amount":23371,"desc":"","recurring":false},{"id":1786346378377,"type":"income","date":"2026-08-01","category":"משכורת אשה","amount":12024,"desc":"","recurring":false},{"id":1786346395260,"type":"income","date":"2026-08-01","category":"ביטוח לאומי","amount":2417,"desc":"","recurring":false},{"id":1786346408857,"type":"income","date":"2026-08-01","category":"ביטוח לאומי","amount":2757,"desc":"","recurring":false},{"id":1786346435558,"type":"expense","date":"2026-08-01","category":"מועצה מיסים","amount":800,"desc":"","recurring":false},{"id":1786346451704,"type":"expense","date":"2026-08-01","category":"רגבה מיסים","amount":199,"desc":"","recurring":false},{"id":1786346486190,"type":"expense","date":"2026-08-01","category":"רגבה מיסים","amount":119,"desc":"","recurring":false},{"id":1786346518453,"type":"expense","date":"2026-08-01","category":"רגבה מיסים","amount":190,"desc":"","recurring":false},{"id":1786346550156,"type":"expense","date":"2026-08-01","category":"טלפון","amount":100,"desc":"","recurring":false},{"id":1786346570535,"type":"expense","date":"2026-08-01","category":"פלאפון","amount":100,"desc":"","recurring":false},{"id":1786346585122,"type":"expense","date":"2026-08-01","category":"גז","amount":175,"desc":"","recurring":false},{"id":1786346600842,"type":"expense","date":"2026-08-01","category":"מים","amount":200,"desc":"","recurring":false},{"id":1786346618010,"type":"expense","date":"2026-08-01","category":"כבלים","amount":250,"desc":"","recurring":false},{"id":1786346633189,"type":"expense","date":"2026-08-01","category":"נטפליקס","amount":100,"desc":"","recurring":false},{"id":1786346647687,"type":"expense","date":"2026-08-01","category":"עיתונים","amount":100,"desc":"","recurring":false},{"id":1786346661389,"type":"expense","date":"2026-08-01","category":"תמי 4","amount":100,"desc":"","recurring":false},{"id":1786346676795,"type":"expense","date":"2026-08-01","category":"רכב","amount":950,"desc":"","recurring":false},{"id":1786346703277,"type":"expense","date":"2026-08-01","category":"קופת חולים","amount":1200,"desc":"","recurring":false},{"id":1786346724007,"type":"expense","date":"2026-08-01","category":"ביטוח בריאות","amount":70,"desc":"","recurring":false},{"id":1786346743537,"type":"expense","date":"2026-08-01","category":"ילדים","amount":2000,"desc":"","recurring":false},{"id":1786346923219,"type":"expense","date":"2026-08-01","category":"ביגוד ושונות בעל","amount":285,"desc":"","recurring":false},{"id":1786346940792,"type":"expense","date":"2026-08-01","category":"ביגוד ושונות בעל","amount":230,"desc":"","recurring":false},{"id":1786346960404,"type":"expense","date":"2026-08-01","category":"ביגוד ושונות בעל","amount":160,"desc":"","recurring":false},{"id":1786346978374,"type":"expense","date":"2026-08-01","category":"רכישות וקניות לבית","amount":200,"desc":"","recurring":false},{"id":1786346996854,"type":"expense","date":"2026-08-01","category":"רכישות וקניות לבית","amount":390,"desc":"","recurring":false},{"id":1786347011584,"type":"expense","date":"2026-08-01","category":"רכישות וקניות לבית","amount":680,"desc":"","recurring":false},{"id":1786347031617,"type":"expense","date":"2026-08-01","category":"רכב","amount":396,"desc":"","recurring":false},{"id":1786347049009,"type":"expense","date":"2026-08-01","category":"רכב","amount":618,"desc":"","recurring":false},{"id":1786347089509,"type":"expense","date":"2026-08-01","category":"דברי מכולת","amount":300,"desc":"","recurring":false},{"id":1786347107014,"type":"expense","date":"2026-08-01","category":"רכב","amount":900,"desc":"","recurring":false},{"id":1786347138087,"type":"expense","date":"2026-08-01","category":"דברי מכולת","amount":360,"desc":"","recurring":false},{"id":1786347161720,"type":"expense","date":"2026-08-01","category":"תרופות","amount":350,"desc":"","recurring":false},{"id":1786347179374,"type":"expense","date":"2026-08-01","category":"חתולים","amount":200,"desc":"","recurring":false},{"id":1786347196197,"type":"expense","date":"2026-08-01","category":"שונות","amount":100,"desc":"","recurring":false},{"id":1786347218749,"type":"expense","date":"2026-08-01","category":"אירוח, חוגים והובי","amount":150,"desc":"","recurring":false},{"id":1786347256227,"type":"expense","date":"2026-08-01","category":"רפואה","amount":110,"desc":"","recurring":false},{"id":1786347274362,"type":"expense","date":"2026-08-01","category":"דברי מכולת","amount":130,"desc":"","recurring":false},{"id":1786347289504,"type":"expense","date":"2026-08-01","category":"שונות","amount":250,"desc":"","recurring":false},{"id":1786347305390,"type":"expense","date":"2026-08-01","category":"דברי מכולת","amount":330,"desc":"","recurring":false},{"id":1786347332742,"type":"expense","date":"2026-08-01","category":"אירוח, חוגים והובי","amount":350,"desc":"","recurring":false},{"id":1786347350366,"type":"expense","date":"2026-08-01","category":"דברי מכולת","amount":230,"desc":"","recurring":false},{"id":1786347374052,"type":"expense","date":"2026-08-01","category":"תרופות","amount":50,"desc":"","recurring":false},{"id":1786347394767,"type":"expense","date":"2026-08-01","category":"דברי מכולת","amount":350,"desc":"","recurring":false},{"id":1786347418595,"type":"expense","date":"2026-08-01","category":"דברי מכולת","amount":213,"desc":"","recurring":false},{"id":1786347447208,"type":"expense","date":"2026-08-01","category":"אירוח, חוגים והובי","amount":230,"desc":"","recurring":false},{"id":1786347470308,"type":"expense","date":"2026-08-01","category":"רפואה","amount":150,"desc":"","recurring":false},{"id":1786347501433,"type":"expense","date":"2026-08-01","category":"רכישות וקניות לבית","amount":170,"desc":"","recurring":false},{"id":1786347535101,"type":"expense","date":"2026-08-01","category":"דברי מכולת","amount":250,"desc":"","recurring":false},{"id":1786347547139,"type":"expense","date":"2026-08-01","category":"שונות","amount":1000,"desc":"","recurring":false},{"id":1786347601949,"type":"expense","date":"2026-08-01","category":"דברי מכולת","amount":270,"desc":"","recurring":false},{"id":1786431792214,"type":"expense","date":"2026-08-01","category":"דברי מכולת","amount":110,"desc":"","recurring":false},{"id":1786453884336,"type":"expense","date":"2026-08-01","category":"ביגוד ושונות אשה","amount":350,"desc":"","recurring":false},{"id":1786522229969,"type":"expense","date":"2026-08-01","category":"תרופות","amount":330,"desc":"","recurring":false},{"id":1786522243419,"type":"expense","date":"2026-08-01","category":"שונות","amount":100,"desc":"","recurring":false},{"id":1786522259146,"type":"expense","date":"2026-08-01","category":"חתולים","amount":263,"desc":"","recurring":false},{"id":1786522271042,"type":"expense","date":"2026-08-01","category":"דלק","amount":232,"desc":"","recurring":false},{"id":1786551272461,"type":"expense","date":"2026-08-01","category":"שונות","amount":1000,"desc":"","recurring":false},{"id":1786617954352,"type":"expense","date":"2026-08-01","category":"רפואה","amount":100,"desc":"","recurring":false},{"id":1786629336376,"type":"expense","date":"2026-08-01","category":"ילדים","amount":4500,"desc":"","recurring":false},{"id":1786688114201,"type":"expense","date":"2026-08-01","category":"דברי מכולת","amount":210,"desc":"","recurring":false},{"id":1786726345509,"type":"expense","date":"2026-08-01","category":"חתולים","amount":270,"desc":"","recurring":false},{"id":1786726369487,"type":"expense","date":"2026-08-01","category":"דברי מכולת","amount":180,"desc":"","recurring":false},{"id":1786773905915,"type":"expense","date":"2026-08-01","category":"רפואה","amount":120,"desc":"","recurring":false},{"id":1786994829760,"type":"expense","date":"2026-08-01","category":"דברי מכולת","amount":210,"desc":"","recurring":false},{"id":1786994844843,"type":"expense","date":"2026-08-01","category":"חתולים","amount":270,"desc":"","recurring":false},{"id":1786994861086,"type":"expense","date":"2026-08-01","category":"דברי מכולת","amount":180,"desc":"","recurring":false},{"id":1786994873706,"type":"expense","date":"2026-08-01","category":"רפואה","amount":120,"desc":"","recurring":false},{"id":1786994888864,"type":"expense","date":"2026-08-01","category":"רכישות וקניות לבית","amount":700,"desc":"","recurring":false},{"id":1786994903242,"type":"expense","date":"2026-08-01","category":"דברי מכולת","amount":400,"desc":"","recurring":false},{"id":1786994917194,"type":"expense","date":"2026-08-01","category":"חתולים","amount":270,"desc":"","recurring":false},{"id":1787047691038,"type":"expense","date":"2026-08-01","category":"גינון","amount":700,"desc":"","recurring":false},{"id":1787167383208,"type":"expense","date":"2026-08-01","category":"דברי מכולת","amount":160,"desc":"","recurring":false},{"id":1787167397896,"type":"expense","date":"2026-08-01","category":"רפואה","amount":100,"desc":"","recurring":false},{"id":1787247205788,"type":"expense","date":"2026-08-01","category":"שונות","amount":100,"desc":"","recurring":false},{"id":1787247222274,"type":"expense","date":"2026-08-01","category":"חתולים","amount":100,"desc":"","recurring":false},{"id":1787457580876,"type":"expense","date":"2026-08-01","category":"דברי מכולת","amount":250,"desc":"","recurring":false},{"id":1787497697707,"type":"expense","date":"2026-08-01","category":"דברי מכולת","amount":200,"desc":"","recurring":false},{"id":1787497719374,"type":"expense","date":"2026-08-01","category":"דברי מכולת","amount":200,"desc":"","recurring":false},{"id":1787557261150,"type":"expense","date":"2026-08-01","category":"שונות","amount":250,"desc":"","recurring":false},{"id":1787657279893,"type":"expense","date":"2026-08-01","category":"אירוח, חוגים והובי","amount":1250,"desc":"","recurring":false},{"id":1787657302824,"type":"expense","date":"2026-08-01","category":"גינון","amount":700,"desc":"","recurring":false},{"id":1787657329169,"type":"expense","date":"2026-08-01","category":"אירוח, חוגים והובי","amount":280,"desc":"","recurring":false},{"id":1787668060799,"type":"expense","date":"2026-08-01","category":"דלק","amount":300,"desc":"","recurring":false},{"id":1787676021252,"type":"expense","date":"2026-08-01","category":"תרופות","amount":310,"desc":"","recurring":false},{"id":1787730775820,"type":"expense","date":"2026-08-01","category":"שונות","amount":300,"desc":"","recurring":false},{"id":1787816059686,"type":"expense","date":"2026-08-01","category":"דברי מכולת","amount":100,"desc":"","recurring":false},{"id":1787923590624,"type":"expense","date":"2026-08-01","category":"שונות","amount":250,"desc":"","recurring":false},{"id":1787975502998,"type":"expense","date":"2026-08-01","category":"שונות","amount":250,"desc":"","recurring":false}];
+  d.tx=(Array.isArray(d.tx)?d.tx:[]).filter(t=>!String(t.date||'').startsWith('2026-08'));
+  d.tx.push(...imported);
+  if(!Array.isArray(d.incomeCats)) d.incomeCats=[];
+  const blOld=d.incomeCats.findIndex(c=>c&&c.name==='ביטוח לאומי');
+  const bl=blOld>=0?d.incomeCats.splice(blOld,1)[0]:{name:'ביטוח לאומי',budget:0};
+  d.incomeCats.splice(Math.min(2,d.incomeCats.length),0,bl);
+  localStorage.setItem(KEY,JSON.stringify(d));
+  localStorage.setItem(MIGRATION_KEY,'done');
+})();
+
+// Version 51: place ביטוח לאומי at income category #3, including after v50 was already opened.
+(function(){
+  const K='home_budget_income_order_v51';
+  if(localStorage.getItem(K)!=='done'){
+    if(!Array.isArray(d.incomeCats)) d.incomeCats=[];
+    const i=d.incomeCats.findIndex(c=>c&&c.name==='ביטוח לאומי');
+    const c=i>=0?d.incomeCats.splice(i,1)[0]:{name:'ביטוח לאומי',budget:0};
+    d.incomeCats.splice(Math.min(2,d.incomeCats.length),0,c);
+    localStorage.setItem(KEY,JSON.stringify(d));
+    localStorage.setItem(K,'done');
+  }
+})();
+function save(){localStorage.setItem(KEY,JSON.stringify(d))}
+function money(x){return new Intl.NumberFormat('he-IL',{style:'currency',currency:'ILS',maximumFractionDigits:0}).format(x||0)}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function months(){let a=[],now=new Date();for(let i=-240;i<=0;i++){let z=new Date(now.getFullYear(),now.getMonth()+i,1);a.push(z.toISOString().slice(0,7))}return a}
+function ml(m){let [y,x]=m.split('-');return new Date(+y,+x-1,1).toLocaleDateString('he-IL',{month:'long',year:'numeric'})}
+function fill(){
+  let ms=months(),cur=new Date().toISOString().slice(0,7);
+  for(let id of ['homeMonth','incomeMonth','expenseMonth','reportMonth']){
+    let el=document.getElementById(id),old=el.value;
+    el.innerHTML=ms.map(m=>`<option value="${m}">${ml(m)}</option>`).join('');
+    el.value=old&&ms.includes(old)?old:cur;
+  }
+}
+function totals(m){let a=d.tx.filter(t=>!m||t.date.startsWith(m));return{income:a.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),expense:a.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0)}}
+function view(id){document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');if(id==='home')renderHome();if(id==='income'){renderList('income');const p=document.getElementById('incomePeriod');if(p)p.value=`${String(selectedMonth).padStart(2,'0')}/${selectedYear}`;}if(id==='expense'){renderList('expense');const p=document.getElementById('expensePeriod');if(p)p.value=`${String(selectedMonth).padStart(2,'0')}/${selectedYear}`;}if(id==='cats')renderCats();if(id==='reports'){renderReport();renderMonthlyReport()};requestAnimationFrame(()=>{
+  window.scrollTo(0,0);
+  document.documentElement.scrollTop=0;
+  document.body.scrollTop=0;
+  document.documentElement.scrollLeft=0;
+  document.body.scrollLeft=0;
+  if(id==='home'){
+    const main=document.querySelector('main');
+    if(main) main.scrollIntoView({block:'start',inline:'center'});
+    window.scrollTo(0,0);
+  }
+})}
+function fillCats(){incomeCat.innerHTML=d.incomeCats.map(x=>`<option>${esc(x.name)}</option>`).join('');expenseCat.innerHTML=d.expenseCats.map(x=>`<option>${esc(x.name)}</option>`).join('')}
+function cancelEntry(t){
+  const form=document.querySelector(`#${t} form`);
+  if(form) form.reset();
+  fillCats();
+  const p=document.getElementById(t==='income'?'incomePeriod':'expensePeriod');
+  if(p) p.value=`${String(selectedMonth).padStart(2,'0')}/${selectedYear}`;
+  view('home');
+}
+
+function addTx(e,t){
+  e.preventDefault();
+  const i=t==='income';
+  const ym=selectedYM();
+  d.tx.push({
+    id:Date.now(),
+    type:t,
+    date:`${ym}-01`,
+    category:(i?incomeCat:expenseCat).value,
+    amount:+(i?incomeAmount:expenseAmount).value,
+    desc:(i?incomeDesc:expenseDesc).value,
+    recurring:false
+  });
+  save();
+  e.target.reset();
+  fillCats();
+  const periodText=`${String(selectedMonth).padStart(2,'0')}/${selectedYear}`;
+  const p=document.getElementById(i?'incomePeriod':'expensePeriod');
+  if(p) p.value=periodText;
+  renderList(t);
+  renderHome();
+  view('home');
+}
+function renderList(t){let m=document.getElementById(t+'Month').value,q=(document.getElementById(t+'Search').value||'').toLowerCase(),body=document.getElementById(t+'Body');let a=d.tx.filter(x=>x.type===t&&(!m||x.date.startsWith(m))&&(!q||(`${x.category} ${x.desc}`).toLowerCase().includes(q))).sort((a,b)=>b.date.localeCompare(a.date));body.innerHTML=a.map(x=>`<tr><td>${x.date}</td><td>${esc(x.category)}</td><td>${esc(x.desc)} ${x.recurring?'🔄':''}</td><td class="${t==='income'?'good':'bad'}">${money(x.amount)}</td><td><button class="danger" onclick="delTx(${x.id})">מחק</button></td></tr>`).join('')||`<tr><td colspan="5">אין ${t==='income'?'הכנסות':'הוצאות'}</td></tr>`}
+function delTx(id){if(confirm('למחוק את התנועה?')){d.tx=d.tx.filter(t=>t.id!==id);save();renderList('income');renderList('expense');renderHome();renderReport()}}
+function deleteTx(id){
+  if(!confirm('למחוק את התנועה הזו?')) return;
+  d.tx=d.tx.filter(t=>t.id!==id);
+  save();
+  renderHome();
+  renderList('income');
+  renderList('expense');
+  renderReport();
+  renderMonthlyReport();
+}
+let homeFilter='';
+function setHomeFilter(f){
+  homeFilter=f;
+  renderHome();
+}
+function renderHome(){
+  let m=homeMonth.value,x=totals(m);
+  hi.textContent=money(x.income);
+  he.textContent=money(x.expense);
+  let b=x.income-x.expense;
+  hb.textContent=money(b);
+  hb.className='num '+(b<0?'bad':'good');
+  hr.textContent=x.income?Math.round((b/x.income)*100)+'%':'0%';
+
+  const title=document.getElementById('homeSelectedMonth');
+  if(title) title.textContent=ml(m);
+
+  let rows=d.tx
+    .filter(t=>t.date.startsWith(m) && (!homeFilter || t.type===homeFilter))
+    .sort((a,b)=>{
+      const byDate=b.date.localeCompare(a.date);
+      return byDate!==0 ? byDate : b.id-a.id;
+    });
+
+  const body=document.getElementById('homeTxBody');
+  if(body){
+    body.innerHTML=rows.map((t,i)=>`<tr>
+      <td class="seq">#${String(rows.length-i).padStart(3,'0')}</td>
+      <td>${esc(t.category)}</td>
+      <td class="${t.type==='income'?'good':'bad'}">${money(t.amount)}</td>
+      <td><button class="trash-btn" onclick="deleteTx(${t.id})" title="מחיקת תנועה" aria-label="מחיקה">🗑</button></td>
+    </tr>`).join('') || '<tr><td colspan="4">אין תנועות בחודש זה.</td></tr>';
+  }
+}
+
+function renderReport(){
+  const currentYear=new Date().getFullYear();
+  const minAllowed=currentYear-19;
+
+  let years=[...new Set(
+    d.tx
+      .map(t=>Number(t.date.slice(0,4)))
+      .filter(y=>y>=minAllowed && y<=currentYear)
+  )].sort((a,b)=>b-a);
+
+  if(!years.length){
+    yearlyReport.innerHTML='<tr><td colspan="4">אין עדיין נתונים להצגה.</td></tr>';
+    yearlyFoot.innerHTML='';
+    allYearsIncome.textContent=money(0);
+    allYearsExpense.textContent=money(0);
+    allYearsBalance.textContent=money(0);
+    allYearsBalance.className='num';
+    return;
+  }
+
+  let rows=years.map(y=>{
+    let x=totals(String(y));
+    return {
+      year:y,
+      income:x.income,
+      expense:x.expense,
+      balance:x.income-x.expense
+    };
+  });
+
+  yearlyReport.innerHTML=rows.map(r=>`<tr>
+    <td style="font-size:16px"><b>${r.year}</b></td>
+    <td class="good">${money(r.income)}</td>
+    <td class="bad">${money(r.expense)}</td>
+    <td class="${r.balance<0?'bad':'good'}">${money(r.balance)}</td>
+  </tr>`).join('');
+
+  let incomeTotal=rows.reduce((s,r)=>s+r.income,0);
+  let expenseTotal=rows.reduce((s,r)=>s+r.expense,0);
+  let balanceTotal=incomeTotal-expenseTotal;
+
+  allYearsIncome.textContent=money(incomeTotal);
+  allYearsExpense.textContent=money(expenseTotal);
+  allYearsBalance.textContent=money(balanceTotal);
+  allYearsBalance.className='num '+(balanceTotal<0?'bad':'good');
+
+  yearlyFoot.innerHTML=`<tr>
+    <th>סה״כ לכל השנים</th>
+    <th class="good">${money(incomeTotal)}</th>
+    <th class="bad">${money(expenseTotal)}</th>
+    <th class="${balanceTotal<0?'bad':'good'}">${money(balanceTotal)}</th>
+  </tr>`;
+}
+
+let printDestination='screen';
+let selectedPrintReport=1;
+
+function openPrintChoice(){
+  const hm=document.getElementById('homeMonth');
+  if(hm && hm.value){
+    const parts=hm.value.split('-').map(Number);
+    if(parts.length===2 && Number.isFinite(parts[0]) && Number.isFinite(parts[1])){
+      selectedYear=parts[0];
+      selectedMonth=parts[1];
+    }
+  }
+  const m=document.getElementById('printModal');
+  if(!m) return;
+  m.classList.add('open');
+  document.getElementById('printStepChoice').style.display='block';
+  document.getElementById('printStepReports').style.display='none';
+  document.getElementById('printStepParams').style.display='none';
+  document.getElementById('reportOutput').innerHTML='';
+}
+function closePrintModal(){
+  document.getElementById('printModal')?.classList.remove('open');
+  document.body.classList.remove('printing-report');
+}
+function chooseReportDestination(dest){
+  printDestination=dest;
+  document.getElementById('printStepChoice').style.display='none';
+  document.getElementById('printStepReports').style.display='block';
+  document.getElementById('destinationTitle').textContent=
+    dest==='printer' ? 'בחר דוח להדפסה למדפסת' : 'בחר דוח להצגה במסך';
+}
+function backToDestination(){
+  document.getElementById('printStepChoice').style.display='block';
+  document.getElementById('printStepReports').style.display='none';
+}
+function backToReportList(){
+  document.getElementById('printStepParams').style.display='none';
+  document.getElementById('printStepReports').style.display='block';
+  document.getElementById('reportOutput').innerHTML='';
+}
+function selectPrintReport(n){
+  selectedPrintReport=n;
+  document.getElementById('printStepReports').style.display='none';
+  document.getElementById('printStepParams').style.display='block';
+  const p=document.getElementById('reportParams');
+  const btn=document.getElementById('runReportBtn');
+  btn.textContent=printDestination==='printer'?'הדפס למדפסת':'הצג למסך';
+
+  if(n===1){
+    p.innerHTML=`<h3>רשימת הכנסות והוצאות</h3>
+      <div class="report-controls">
+        <label>שנה<input id="rpYear" type="number" min="1900" max="2100" value="${selectedYear}"></label>
+        <label>חודש<input id="rpMonth" type="number" min="1" max="12" value="${selectedMonth}"></label>
+      </div>`;
+  }else if(n===2){
+    p.innerHTML=`<h3>טבלת קטגוריות הוצאות — 12 חודשים</h3>
+      <div class="report-controls">
+        <label>שנה<input id="rpYear" type="number" min="1900" max="2100" value="${selectedYear}"></label>
+      </div>`;
+  }else if(n===3){
+    p.innerHTML=`<h3>טבלת קטגוריות הוצאות — 12 שנים</h3>
+      <div class="report-controls">
+        <label>שנה אחרונה בטבלה<input id="rpYear" type="number" min="1900" max="2100" value="${selectedYear}"></label>
+      </div>`;
+  }else if(n===4){
+    p.innerHTML=`<h3>סיכום הכנסות, הוצאות ויתרה — 12 חודשים</h3>
+      <div class="report-controls">
+        <label>שנה<input id="rpYear" type="number" min="1900" max="2100" value="${selectedYear}"></label>
+      </div>`;
+  }else{
+    p.innerHTML=`<h3>סיכום הכנסות, הוצאות ויתרה — 12 שנים</h3>
+      <div class="report-controls">
+        <label>שנה אחרונה בטבלה<input id="rpYear" type="number" min="1900" max="2100" value="${selectedYear}"></label>
+      </div>`;
+  }
+  document.getElementById('reportOutput').innerHTML='';
+  if(printDestination==='screen'){
+    runSelectedReport();
+  }
+}
+
+function getExpenseCategoryNames(){
+  return d.expenseCats.map(x=>x.name);
+}
+function amountForExpenseCategory(category, year, month=null){
+  return d.tx
+    .filter(t=>t.type==='expense' && t.category===category &&
+      Number(String(t.date||'').slice(0,4))===Number(year) &&
+      (month===null || Number(String(t.date||'').slice(5,7))===Number(month)))
+    .reduce((sum,t)=>sum+Number(t.amount||0),0);
+}
+function makeReport1(year,month){
+  const ym=`${year}-${String(month).padStart(2,'0')}`;
+  let rows=d.tx
+    .filter(t=>String(t.date||'').slice(0,7)===ym)
+    .sort((a,b)=>{
+      const byDate=b.date.localeCompare(a.date);
+      return byDate!==0?byDate:b.id-a.id;
+    });
+  const body=rows.map((t,i)=>`<tr>
+    <td>#${String(rows.length-i).padStart(3,'0')}</td>
+    <td>${esc(t.category)}</td>
+    <td class="${t.type==='income'?'income-amount':'expense-amount'}">${t.type==='expense'?'− ':''}${money(t.amount)}</td>
+  </tr>`).join('') || `<tr><td colspan="3">אין תנועות בתקופה שנבחרה.</td></tr>`;
+  return `<div class="report-title">רשימת הכנסות והוצאות</div>
+    <div class="report-subtitle">${ml(ym)} — ${rows.length} תנועות</div>
+    <div class="report-scroll"><table class="report1-table">
+      <thead><tr><th>מס׳</th><th>קטגוריה</th><th>סכום</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table></div>`;
+}
+function makeReport2(year){
+  const cats=getExpenseCategoryNames();
+  const monthNames=Array.from({length:12},(_,i)=>new Date(2020,i,1).toLocaleDateString('he-IL',{month:'short'}));
+  let monthTotals=Array(12).fill(0);
+  const rows=cats.map(cat=>{
+    const vals=Array.from({length:12},(_,i)=>{
+      const v=amountForExpenseCategory(cat,year,i+1);
+      monthTotals[i]+=v;
+      return v;
+    });
+    const total=vals.reduce((a,b)=>a+b,0);
+    return `<tr><td class="cat">${esc(cat)}</td>${vals.map(v=>`<td>${v?money(v):''}</td>`).join('')}<td><b>${money(total)}</b></td></tr>`;
+  }).join('');
+  const grand=monthTotals.reduce((a,b)=>a+b,0);
+  return `<div class="report-title">טבלת קטגוריות הוצאות — 12 חודשים</div>
+    <div class="report-subtitle">שנת ${year}</div>
+    <div class="report-scroll"><table>
+      <thead><tr><th>קטגוריה</th>${monthNames.map(x=>`<th>${x}</th>`).join('')}<th>סה״כ</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr class="total-row"><td>סה״כ</td>${monthTotals.map(v=>`<td>${money(v)}</td>`).join('')}<td>${money(grand)}</td></tr></tfoot>
+    </table></div>`;
+}
+function makeReport3(endYear){
+  const cats=getExpenseCategoryNames();
+  const years=Array.from({length:12},(_,i)=>Number(endYear)-11+i);
+  let yearTotals=Array(12).fill(0);
+  const rows=cats.map(cat=>{
+    const vals=years.map((y,i)=>{
+      const v=amountForExpenseCategory(cat,y,null);
+      yearTotals[i]+=v;
+      return v;
+    });
+    const total=vals.reduce((a,b)=>a+b,0);
+    return `<tr><td class="cat">${esc(cat)}</td>${vals.map(v=>`<td>${v?money(v):''}</td>`).join('')}<td><b>${money(total)}</b></td></tr>`;
+  }).join('');
+  const grand=yearTotals.reduce((a,b)=>a+b,0);
+  return `<div class="report-title">טבלת קטגוריות הוצאות — 12 שנים</div>
+    <div class="report-subtitle">${years[years.length-1]}–${years[0]}</div>
+    <div class="report-scroll"><table>
+      <thead><tr><th>קטגוריה</th>${years.map(y=>`<th>${y}</th>`).join('')}<th>סה״כ</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr class="total-row"><td>סה״כ</td>${yearTotals.map(v=>`<td>${money(v)}</td>`).join('')}<td>${money(grand)}</td></tr></tfoot>
+    </table></div>`;
+}
+
+function sumTypeForPeriod(type, year, month=null){
+  return d.tx
+    .filter(t=>t.type===type &&
+      Number(String(t.date||'').slice(0,4))===Number(year) &&
+      (month===null || Number(String(t.date||'').slice(5,7))===Number(month)))
+    .reduce((sum,t)=>sum+Number(t.amount||0),0);
+}
+function makeReport4(year){
+  const monthNames=Array.from({length:12},(_,i)=>new Date(2020,i,1).toLocaleDateString('he-IL',{month:'short'}));
+  const incomeCats=d.incomeCats.map(x=>x.name);
+  const incomeRows=incomeCats.map(cat=>{
+    const vals=Array.from({length:12},(_,i)=>d.tx
+      .filter(t=>t.type==='income' && t.category===cat &&
+        Number(String(t.date||'').slice(0,4))===Number(year) &&
+        Number(String(t.date||'').slice(5,7))===i+1)
+      .reduce((sum,t)=>sum+Number(t.amount||0),0));
+    const total=vals.reduce((a,b)=>a+b,0);
+    return `<tr><td class="cat">${esc(cat)}</td>${vals.map(v=>`<td class="income-amount">${v?money(v):''}</td>`).join('')}<td class="income-amount"><b>${money(total)}</b></td></tr>`;
+  }).join('');
+  const incomes=Array.from({length:12},(_,i)=>sumTypeForPeriod('income',year,i+1));
+  const expenses=Array.from({length:12},(_,i)=>sumTypeForPeriod('expense',year,i+1));
+  const balances=incomes.map((v,i)=>v-expenses[i]);
+  const totalExpense=expenses.reduce((a,b)=>a+b,0);
+  const totalBalance=incomes.reduce((a,b)=>a+b,0)-totalExpense;
+  return `<div class="report-title">סיכום הכנסות, הוצאות ויתרה — 12 חודשים</div>
+    <div class="report-subtitle">שנת ${year}</div>
+    <div class="report-scroll"><table>
+      <thead><tr><th>קטגוריית הכנסה</th>${monthNames.map(x=>`<th>${x}</th>`).join('')}<th>סה״כ</th></tr></thead>
+      <tbody>
+        ${incomeRows}
+        <tr><td class="cat">סה״כ הוצאות</td>${expenses.map(v=>`<td class="expense-amount">− ${money(v)}</td>`).join('')}<td class="expense-amount"><b>− ${money(totalExpense)}</b></td></tr>
+        <tr class="total-row"><td class="cat">יתרה</td>${balances.map(v=>`<td>${v<0?'− ':''}${money(Math.abs(v))}</td>`).join('')}<td>${totalBalance<0?'− ':''}${money(Math.abs(totalBalance))}</td></tr>
+      </tbody>
+    </table></div>`;
+}
+function makeReport5(endYear){
+  const years=Array.from({length:12},(_,i)=>Number(endYear)-i);
+  const incomeCats=d.incomeCats.map(x=>x.name);
+  const incomeRows=incomeCats.map(cat=>{
+    const vals=years.map(y=>d.tx
+      .filter(t=>t.type==='income' && t.category===cat &&
+        Number(String(t.date||'').slice(0,4))===Number(y))
+      .reduce((sum,t)=>sum+Number(t.amount||0),0));
+    const total=vals.reduce((a,b)=>a+b,0);
+    return `<tr><td class="cat">${esc(cat)}</td>${vals.map(v=>`<td class="income-amount">${v?money(v):''}</td>`).join('')}<td class="income-amount"><b>${money(total)}</b></td></tr>`;
+  }).join('');
+  const incomes=years.map(y=>sumTypeForPeriod('income',y,null));
+  const expenses=years.map(y=>sumTypeForPeriod('expense',y,null));
+  const balances=incomes.map((v,i)=>v-expenses[i]);
+  const totalExpense=expenses.reduce((a,b)=>a+b,0);
+  const totalBalance=incomes.reduce((a,b)=>a+b,0)-totalExpense;
+  return `<div class="report-title">סיכום הכנסות, הוצאות ויתרה — 12 שנים</div>
+    <div class="report-subtitle">${years[0]}–${years[years.length-1]}</div>
+    <div class="report-scroll"><table>
+      <thead><tr><th>קטגוריית הכנסה</th>${years.map(y=>`<th>${y}</th>`).join('')}<th>סה״כ</th></tr></thead>
+      <tbody>
+        ${incomeRows}
+        <tr><td class="cat">סה״כ הוצאות</td>${expenses.map(v=>`<td class="expense-amount">− ${money(v)}</td>`).join('')}<td class="expense-amount"><b>− ${money(totalExpense)}</b></td></tr>
+        <tr class="total-row"><td class="cat">יתרה</td>${balances.map(v=>`<td>${v<0?'− ':''}${money(Math.abs(v))}</td>`).join('')}<td>${totalBalance<0?'− ':''}${money(Math.abs(totalBalance))}</td></tr>
+      </tbody>
+    </table></div>`;
+}
+
+function runSelectedReport(){
+  let y=parseInt(document.getElementById('rpYear')?.value,10);
+  if(!Number.isFinite(y)) y=selectedYear;
+  let html='';
+  if(selectedPrintReport===1){
+    let m=parseInt(document.getElementById('rpMonth')?.value,10);
+    if(!Number.isFinite(m)) m=selectedMonth;
+    m=Math.max(1,Math.min(12,m));
+    document.getElementById('rpMonth').value=m;
+    html=makeReport1(y,m);
+  }else if(selectedPrintReport===2){
+    html=makeReport2(y);
+  }else if(selectedPrintReport===3){
+    html=makeReport3(y);
+  }else if(selectedPrintReport===4){
+    html=makeReport4(y);
+  }else{
+    html=makeReport5(y);
+  }
+  document.getElementById('reportOutput').innerHTML=html;
+  if(printDestination==='printer'){
+    printGeneratedReport(html);
+  }
+}
+
+function printGeneratedReport(reportHtml){
+  const w=window.open('','_blank','width=1000,height=800');
+  if(!w){
+    alert('הדפדפן חסם את חלון ההדפסה. יש לאפשר חלונות קופצים ולנסות שוב.');
+    return;
+  }
+  w.document.open();
+  w.document.write(`<!doctype html>
+  <html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>הדפסת דוח</title>
+    <style>
+      body{font-family:Arial,sans-serif;direction:rtl;margin:18px;color:#111}
+      .report-title{text-align:center;font-size:22px;font-weight:900;margin:8px 0 4px}
+      .report-subtitle{text-align:center;margin-bottom:14px;color:#444}
+      .report-scroll{overflow:visible}
+      table{width:100%;border-collapse:collapse;table-layout:auto}
+      th,td{border:1px solid #999;padding:6px;text-align:center;font-size:11px}
+      th{background:#eee}
+      td.cat{text-align:right;font-weight:700}
+      .income-amount{color:#12805c;font-weight:700}
+      .expense-amount{color:#d92d20;font-weight:700}
+      .total-row{font-weight:900;background:#f5f5f5}
+      .report1-table{table-layout:fixed}
+      .report1-table th:nth-child(1),.report1-table td:nth-child(1){width:15%}
+      .report1-table th:nth-child(2),.report1-table td:nth-child(2){width:55%;text-align:right;white-space:normal}
+      .report1-table th:nth-child(3),.report1-table td:nth-child(3){width:30%;text-align:right}
+      @page{size:auto;margin:10mm}
+    </style>
+  </head>
+  <body>${reportHtml}
+<script>
+if (location.protocol === 'file:') {
+  const n=document.getElementById('localFileNotice');
+  if(n) n.style.display='block';
+}
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
+  });
+}
+</script>
+
+</body></html>`);
+  w.document.close();
+  w.focus();
+  setTimeout(()=>{ w.print(); },350);
+}
+window.addEventListener('afterprint',()=>document.body.classList.remove('printing-report'));
+
+function backup(){
+  const now=new Date();
+  const pad=n=>String(n).padStart(2,'0');
+  const stamp=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}`;
+  const backupData={...d,_backupCreatedAt:now.toISOString()};
+  const b=new Blob([JSON.stringify(backupData,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(b);
+  a.download=`גיבוי כרטסת הוצאות_${stamp}.json`;
+  a.click();
+  localStorage.setItem('home_budget_last_backup',now.toISOString());
+  updateBackupStatus();
+  showBackupToast(now);
+  setTimeout(()=>URL.revokeObjectURL(a.href),500);
+}
+function showBackupToast(dt){
+  let el=document.getElementById('backupToast');
+  if(!el){
+    el=document.createElement('div');
+    el.id='backupToast';
+    el.className='backup-toast';
+    document.body.appendChild(el);
+  }
+  el.innerHTML=`<div class="backup-toast-title">✅ הגיבוי בוצע בהצלחה</div><div>${dt.toLocaleDateString('he-IL')} בשעה ${dt.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}</div>`;
+  el.classList.add('show');
+  clearTimeout(window._backupToastTimer);
+  window._backupToastTimer=setTimeout(()=>el.classList.remove('show'),3500);
+}
+function updateBackupStatus(){
+  const el=document.getElementById('lastBackupStatus');
+  if(!el)return;
+  const raw=localStorage.getItem('home_budget_last_backup');
+  if(!raw){el.textContent='עדיין לא בוצע גיבוי';return;}
+  const dt=new Date(raw);
+  el.textContent=`גיבוי אחרון: ${dt.toLocaleDateString('he-IL')} ${dt.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}`;
+}
+function restoreData(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let x=JSON.parse(r.result);if(!x.tx||!x.incomeCats||!x.expenseCats)throw 0;d=x;save();location.reload()}catch{alert('קובץ גיבוי לא תקין')}};r.readAsText(f)}
+
+document.addEventListener('click',e=>{
+  const m=document.getElementById('printModal');
+  if(m && e.target===m) closePrintModal();
+});
+
+document.addEventListener('DOMContentLoaded',()=>{updateBackupStatus();
+  fill();
+  fillCats();
+  syncManualInputs();
+  refreshSelectedPeriod();
+  view('home');
+  renderCats();
+  renderReport();
+});
+</script>
+</body>
+</html>
