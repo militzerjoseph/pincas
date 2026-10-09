@@ -4,9 +4,35 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path android:fillColor="#FFF8E6" android:pathData="M6,6h96a6,6 0,0 1,6 6v84a6,6 0,0 1,-6 6h-96a6,6 0,0 1,-6 -6v-84a6,6 0,0 1,6 -6z"/>
-    <path android:fillColor="#F2C84B" android:pathData="M17,28h28l8,9h38a6,6 0,0 1,6 6v42a8,8 0,0 1,-8 8h-70a8,8 0,0 1,-8 -8v-49a8,8 0,0 1,8 -8z"/>
-    <path android:fillColor="#F7D677" android:pathData="M17,40h74a6,6 0,0 1,6 6v39a8,8 0,0 1,-8 8h-70a8,8 0,0 1,-8 -8v-39a6,6 0,0 1,6 -6z"/>
-    <path android:fillColor="#0E705D" android:pathData="M54,48c6,0 10,3 12,7c5,-1 10,1 13,6c3,5 2,10 -1,14c3,4 3,10 0,14c-3,5 -8,7 -13,6c-3,4 -7,6 -12,6c-6,0 -10,-3 -12,-7c-5,1 -10,-1 -13,-6c-3,-5 -2,-10 1,-14c-3,-4 -3,-10 0,-14c3,-5 8,-7 13,-6c3,-4 7,-6 12,-6zM54,55c-4,0 -7,2 -9,5l9,5l9,-5c-2,-3 -5,-5 -9,-5zM68,61l-9,5v10l9,5c3,-2 5,-5 5,-9c0,-4 -2,-8 -5,-11zM40,61c-3,3 -5,7 -5,11c0,4 2,7 5,9l9,-5v-10zM45,87c2,3 5,5 9,5c4,0 7,-2 9,-5l-9,-5z"/>
-    <path android:fillColor="#D69B22" android:pathData="M24,61h14v4h-14zM29,56h4v14h-4zM73,61h14v4h-14z"/>
+
+    <!-- Warm off-white rounded background -->
+    <path
+        android:fillColor="#FFF8EA"
+        android:pathData="M6,6h96a6,6 0,0 1,6 6v84a6,6 0,0 1,-6 6h-96a6,6 0,0 1,-6 -6v-84a6,6 0,0 1,6 -6z"/>
+
+    <!-- Larger, stronger golden back folder -->
+    <path
+        android:fillColor="#F2B51E"
+        android:pathData="M13,22h31l9,10h40a7,7 0,0 1,7 7v48a9,9 0,0 1,-9 9h-74a9,9 0,0 1,-9 -9v-56a9,9 0,0 1,9 -9z"/>
+
+    <!-- Bright warm-gold front folder, enlarged to fill the icon better -->
+    <path
+        android:fillColor="#FFD45A"
+        android:pathData="M12,36h84a6,6 0,0 1,6 6v45a9,9 0,0 1,-9 9h-78a9,9 0,0 1,-9 -9v-45a6,6 0,0 1,6 -6z"/>
+
+    <!-- Soft cream highlight across the folder face -->
+    <path
+        android:fillColor="#FFE99B"
+        android:fillAlpha="0.72"
+        android:pathData="M14,39h80a4,4 0,0 1,4 4v9h-88v-9a4,4 0,0 1,4 -4z"/>
+
+    <!-- Central green knot symbol -->
+    <path
+        android:fillColor="#0E705D"
+        android:pathData="M54,47c6,0 10,3 12,7c5,-1 10,1 13,6c3,5 2,10 -1,14c3,4 3,10 0,14c-3,5 -8,7 -13,6c-3,4 -7,6 -12,6c-6,0 -10,-3 -12,-7c-5,1 -10,-1 -13,-6c-3,-5 -2,-10 1,-14c-3,-4 -3,-10 0,-14c3,-5 8,-7 13,-6c3,-4 7,-6 12,-6zM54,54c-4,0 -7,2 -9,5l9,5l9,-5c-2,-3 -5,-5 -9,-5zM68,60l-9,5v10l9,5c3,-2 5,-5 5,-9c0,-4 -2,-8 -5,-11zM40,60c-3,3 -5,7 -5,11c0,4 2,7 5,9l9,-5v-10zM45,86c2,3 5,5 9,5c4,0 7,-2 9,-5l-9,-5z"/>
+
+    <!-- Gold plus and minus -->
+    <path
+        android:fillColor="#D89410"
+        android:pathData="M18,62h14v4h-14zM23,57h4v14h-4zM76,62h14v4h-14z"/>
 </vector>
