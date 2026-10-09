@@ -9,6 +9,9 @@ on:
       - '.github/workflows/build-shortcut-builder.yml'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -27,13 +30,33 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Build debug APK
+      - name: Build APKs
         working-directory: shortcut-builder
-        run: gradle :app:assembleDebug --stacktrace
+        run: gradle :app:assembleDebug :wrapper:assembleDebug --stacktrace
 
-      - name: Upload APK
+      - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
-          name: shortcut-builder-trial-apk
-          path: shortcut-builder/app/build/outputs/apk/debug/app-debug.apk
+          name: shortcut-builder-trial-apks
+          path: |
+            shortcut-builder/app/build/outputs/apk/debug/app-debug.apk
+            shortcut-builder/wrapper/build/outputs/apk/debug/wrapper-debug.apk
           if-no-files-found: error
+
+      - name: Publish trial output APK
+        shell: bash
+        run: |
+          mkdir -p /tmp/trial-output/output
+          cp shortcut-builder/app/build/outputs/apk/debug/app-debug.apk /tmp/trial-output/output/shortcut-builder-trial.apk
+          cp shortcut-builder/wrapper/build/outputs/apk/debug/wrapper-debug.apk /tmp/trial-output/output/pincas-income.apk
+          cd /tmp/trial-output
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b shortcut-builder-output
+          git add output
+          git commit -m "Publish shortcut builder trial APKs"
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force origin shortcut-builder-output
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -27,6 +27,10 @@ import android.widget.Toast;
 
 public class MainActivity extends Activity {
 
+    private static final String TRIAL_NAME = "פנקס הכנסות";
+    private static final String TRIAL_URL = "https://script.google.com/macros/s/AKfycbyoJeN1G2EuGczP88itz2r2OKXH5GWL45c3ICe9L2kOHG2rNIFYJ98aRx0UPyZEIHyKxA/exec";
+    private static final String TRIAL_APK_URL = "https://raw.githubusercontent.com/militzerjoseph/pincas/shortcut-builder-output/output/pincas-income.apk";
+
     private EditText nameEdit;
     private EditText urlEdit;
     private TextView previewIcon;
@@ -66,13 +70,13 @@ public class MainActivity extends Activity {
         root.addView(subtitle, lpMatchWrap(0, -10, 0, 16));
 
         LinearLayout nameCard = card("1. שם שיופיע מתחת לאייקון");
-        nameEdit = edit("פנקס הכנסות");
+        nameEdit = edit(TRIAL_NAME);
         nameEdit.setSingleLine(true);
         nameCard.addView(nameEdit, lpMatchWrap(0, 8, 0, 0));
         root.addView(nameCard, lpMatchWrap(0, 0, 0, 12));
 
         LinearLayout urlCard = card("2. כתובת URL");
-        urlEdit = edit("https://");
+        urlEdit = edit(TRIAL_URL);
         urlEdit.setSingleLine(true);
         urlEdit.setTextDirection(View.TEXT_DIRECTION_LTR);
         urlEdit.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
@@ -130,7 +134,7 @@ public class MainActivity extends Activity {
         previewCard.addView(previewIcon, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(170)));
 
-        previewName = text("פנקס הכנסות", 24, Typeface.BOLD, Color.rgb(20,35,55));
+        previewName = text(TRIAL_NAME, 24, Typeface.BOLD, Color.rgb(20,35,55));
         previewName.setGravity(Gravity.CENTER);
         previewCard.addView(previewName, lpMatchWrap(0, 8, 0, 0));
         root.addView(previewCard, lpMatchWrap(0, 0, 0, 12));
@@ -139,11 +143,11 @@ public class MainActivity extends Activity {
         test.setOnClickListener(v -> testLink());
         root.addView(test, lpMatchWrap(0, 0, 0, 8));
 
-        Button create = button("צור APK", true);
-        create.setOnClickListener(v -> createApkRequest());
+        Button create = button("צור APK לדוגמה", true);
+        create.setOnClickListener(v -> downloadTrialApk());
         root.addView(create, lpMatchWrap(0, 0, 0, 8));
 
-        TextView note = text("בגרסת ניסיון זו ההדבקה, הבחירות, התצוגה ובדיקת הקישור פועלות בתוך APK אמיתי. מנגנון הבנייה האוטומטית של APK חדש יחובר לאחר אישור הממשק.",
+        TextView note = text("בגרסת הניסיון הראשונה הכפתור מוריד APK עובד של הדוגמה 'פנקס הכנסות'. לאחר אישור כל התהליך נחבר את השם, הכתובת והאייקון שבחרת לבנייה אוטומטית של APK חדש.",
                 14, Typeface.NORMAL, Color.rgb(100,112,128));
         note.setGravity(Gravity.CENTER);
         note.setPadding(dp(8), dp(10), dp(8), 0);
@@ -186,14 +190,13 @@ public class MainActivity extends Activity {
         String url = normalizedUrl();
         if (url == null) return;
         try {
-            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-            startActivity(intent);
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
         } catch (Exception e) {
             toast("לא ניתן לפתוח את הכתובת");
         }
     }
 
-    private void createApkRequest() {
+    private void downloadTrialApk() {
         String name = nameEdit.getText().toString().trim();
         String url = normalizedUrl();
         if (url == null) return;
@@ -202,11 +205,23 @@ public class MainActivity extends Activity {
             return;
         }
         updatePreview();
-        String summary = "שם: " + name + "\n\nURL: " + url + "\n\nסגנון: " + selectedStyle;
+
+        boolean exactTrial = TRIAL_NAME.equals(name) && TRIAL_URL.equals(url);
+        String msg = exactTrial
+                ? "עכשיו ייפתח קובץ APK עובד של 'פנקס הכנסות'."
+                : "בגרסת ניסיון זו ה-APK המורד הוא עדיין דוגמת 'פנקס הכנסות'. הנתונים ששינית משמשים כרגע לבדיקת הממשק בלבד.";
+
         new AlertDialog.Builder(this)
-                .setTitle("הגדרות מוכנות")
-                .setMessage(summary + "\n\nגרסת הניסיון מוכנה לשלב חיבור מנגנון הבנייה האוטומטית.")
-                .setPositiveButton("אישור", null)
+                .setTitle("הורדת APK")
+                .setMessage(msg)
+                .setNegativeButton("ביטול", null)
+                .setPositiveButton("הורד", (d, which) -> {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(TRIAL_APK_URL)));
+                    } catch (Exception e) {
+                        toast("לא ניתן לפתוח את ההורדה");
+                    }
+                })
                 .show();
     }
 
@@ -225,7 +240,7 @@ public class MainActivity extends Activity {
 
     private void updatePreview() {
         if (previewName == null || previewIcon == null) return;
-        String name = nameEdit == null ? "פנקס הכנסות" : nameEdit.getText().toString().trim();
+        String name = nameEdit == null ? TRIAL_NAME : nameEdit.getText().toString().trim();
         if (TextUtils.isEmpty(name)) name = "שם האפליקציה";
         previewName.setText(name);
 
