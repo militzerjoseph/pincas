@@ -17,6 +17,14 @@ on:
         description: 'Web address loaded by the wrapper'
         required: true
         default: 'https://script.google.com/macros/s/AKfycbyoJeN1G2EuGczP88itz2r2OKXH5GWL45c3ICe9L2kOHG2rNIFYJ98aRx0UPyZEIHyKxA/exec'
+      app_zoom:
+        description: 'WebView zoom percentage'
+        required: true
+        default: '90'
+      request_id:
+        description: 'Client request identifier'
+        required: false
+        default: 'manual'
 
 permissions:
   contents: write
@@ -27,6 +35,8 @@ jobs:
     env:
       APP_NAME: ${{ inputs.app_name || 'פנקס הכנסות' }}
       APP_URL: ${{ inputs.app_url || 'https://script.google.com/macros/s/AKfycbyoJeN1G2EuGczP88itz2r2OKXH5GWL45c3ICe9L2kOHG2rNIFYJ98aRx0UPyZEIHyKxA/exec' }}
+      APP_ZOOM: ${{ inputs.app_zoom || '90' }}
+      REQUEST_ID: ${{ inputs.request_id || 'push-build' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,7 +70,19 @@ jobs:
         run: |
           mkdir -p /tmp/trial-output/output
           cp shortcut-builder/app/build/outputs/apk/debug/app-debug.apk /tmp/trial-output/output/shortcut-builder-trial.apk
+          cp shortcut-builder/wrapper/build/outputs/apk/debug/wrapper-debug.apk /tmp/trial-output/output/generated-app.apk
           cp shortcut-builder/wrapper/build/outputs/apk/debug/wrapper-debug.apk /tmp/trial-output/output/pincas-income.apk
+          python - <<'PY'
+          import json, os, datetime
+          data = {
+              'request_id': os.environ.get('REQUEST_ID', 'push-build'),
+              'app_name': os.environ.get('APP_NAME', ''),
+              'app_zoom': os.environ.get('APP_ZOOM', '90'),
+              'built_at': datetime.datetime.now(datetime.timezone.utc).isoformat()
+          }
+          with open('/tmp/trial-output/output/build-status.json', 'w', encoding='utf-8') as f:
+              json.dump(data, f, ensure_ascii=False)
+          PY
           cd /tmp/trial-output
           git init
           git config user.name "github-actions[bot]"
