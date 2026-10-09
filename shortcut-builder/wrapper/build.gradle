@@ -2,6 +2,10 @@ plugins {
     id 'com.android.application'
 }
 
+def generatedAppName = System.getenv('APP_NAME') ?: 'פנקס הכנסות'
+def generatedAppUrl = System.getenv('APP_URL') ?: 'https://script.google.com/macros/s/AKfycbyoJeN1G2EuGczP88itz2r2OKXH5GWL45c3ICe9L2kOHG2rNIFYJ98aRx0UPyZEIHyKxA/exec'
+def escapedUrl = generatedAppUrl.replace('\\', '\\\\').replace('"', '\\"')
+
 android {
     namespace 'com.militzer.pincasincome'
     compileSdk 35
@@ -12,6 +16,13 @@ android {
         targetSdk 35
         versionCode 1
         versionName '1.0-trial'
+
+        manifestPlaceholders = [appLabel: generatedAppName]
+        buildConfigField 'String', 'START_URL', '"' + escapedUrl + '"'
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 
     buildTypes {
