@@ -28,8 +28,8 @@ public class MainActivity extends Activity {
         s.setDisplayZoomControls(false);
         s.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
 
-        // Initial Android-side scale.
-        webView.setInitialScale(90);
+        int zoomPercent = BuildConfig.ZOOM_PERCENT;
+        webView.setInitialScale(zoomPercent);
 
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
@@ -39,12 +39,14 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
 
-                // The page declares initial-scale=1 in its viewport meta tag.
-                // Replace it after load so the whole page is actually displayed at 90%.
+                String scale = String.valueOf(BuildConfig.ZOOM_PERCENT / 100.0);
                 String js = "(function(){" +
                         "var m=document.querySelector('meta[name=viewport]');" +
                         "if(!m){m=document.createElement('meta');m.name='viewport';document.head.appendChild(m);}" +
-                        "m.setAttribute('content','width=device-width,initial-scale=0.9,minimum-scale=0.9,maximum-scale=0.9,user-scalable=no,viewport-fit=cover');" +
+                        "m.setAttribute('content','width=device-width,initial-scale=" + scale +
+                        ",minimum-scale=" + scale +
+                        ",maximum-scale=" + scale +
+                        ",user-scalable=no,viewport-fit=cover');" +
                         "})();";
                 view.evaluateJavascript(js, null);
             }
