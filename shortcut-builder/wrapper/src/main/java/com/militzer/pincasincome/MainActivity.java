@@ -28,8 +28,8 @@ public class MainActivity extends Activity {
         s.setDisplayZoomControls(false);
         s.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
 
-        // Keep the slightly smaller display approved during the trial.
-        webView.setInitialScale(95);
+        // Default display scale aligned with the older approved Android version.
+        webView.setInitialScale(80);
 
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
