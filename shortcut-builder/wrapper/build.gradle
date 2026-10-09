@@ -4,6 +4,14 @@ plugins {
 
 def generatedAppName = System.getenv('APP_NAME') ?: 'פנקס הכנסות'
 def generatedAppUrl = System.getenv('APP_URL') ?: 'https://script.google.com/macros/s/AKfycbyoJeN1G2EuGczP88itz2r2OKXH5GWL45c3ICe9L2kOHG2rNIFYJ98aRx0UPyZEIHyKxA/exec'
+def generatedZoomText = System.getenv('APP_ZOOM') ?: '90'
+def generatedZoom = 90
+try {
+    generatedZoom = Integer.parseInt(generatedZoomText)
+} catch (Exception ignored) {
+    generatedZoom = 90
+}
+generatedZoom = Math.max(50, Math.min(150, generatedZoom))
 def escapedUrl = generatedAppUrl.replace('\\', '\\\\').replace('"', '\\"')
 
 android {
@@ -19,6 +27,7 @@ android {
 
         manifestPlaceholders = [appLabel: generatedAppName]
         buildConfigField 'String', 'START_URL', '"' + escapedUrl + '"'
+        buildConfigField 'int', 'ZOOM_PERCENT', generatedZoom.toString()
     }
 
     buildFeatures {
