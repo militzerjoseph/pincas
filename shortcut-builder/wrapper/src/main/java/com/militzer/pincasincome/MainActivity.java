@@ -10,7 +10,6 @@ import android.webkit.WebViewClient;
 
 public class MainActivity extends Activity {
     private WebView webView;
-    private static final String START_URL = "https://script.google.com/macros/s/AKfycbyoJeN1G2EuGczP88itz2r2OKXH5GWL45c3ICe9L2kOHG2rNIFYJ98aRx0UPyZEIHyKxA/exec";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,7 +28,7 @@ public class MainActivity extends Activity {
         s.setDisplayZoomControls(false);
         s.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
 
-        // Slightly reduce the whole web view so the ledger fits the phone more comfortably.
+        // Keep the slightly smaller display approved during the trial.
         webView.setInitialScale(95);
 
         CookieManager.getInstance().setAcceptCookie(true);
@@ -38,7 +37,7 @@ public class MainActivity extends Activity {
         webView.setWebChromeClient(new WebChromeClient());
 
         if (savedInstanceState == null) {
-            webView.loadUrl(START_URL);
+            webView.loadUrl(BuildConfig.START_URL);
         } else {
             webView.restoreState(savedInstanceState);
         }
