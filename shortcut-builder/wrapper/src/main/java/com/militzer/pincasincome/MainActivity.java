@@ -28,13 +28,28 @@ public class MainActivity extends Activity {
         s.setDisplayZoomControls(false);
         s.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
 
-        // Default display scale aligned with the older approved Android version.
+        // Initial Android-side scale.
         webView.setInitialScale(80);
 
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
-        webView.setWebViewClient(new WebViewClient());
         webView.setWebChromeClient(new WebChromeClient());
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+
+                // The web page declares initial-scale=1 in its own viewport meta tag,
+                // which can cancel WebView.setInitialScale(). Replace it after load
+                // so the whole page is actually displayed at 80%.
+                String js = "(function(){" +
+                        "var m=document.querySelector('meta[name=viewport]');" +
+                        "if(!m){m=document.createElement('meta');m.name='viewport';document.head.appendChild(m);}" +
+                        "m.setAttribute('content','width=device-width,initial-scale=0.8,minimum-scale=0.8,maximum-scale=0.8,user-scalable=no,viewport-fit=cover');" +
+                        "})();";
+                view.evaluateJavascript(js, null);
+            }
+        });
 
         if (savedInstanceState == null) {
             webView.loadUrl(BuildConfig.START_URL);
