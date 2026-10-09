@@ -25,19 +25,41 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.Random;
+
 public class MainActivity extends Activity {
 
     private static final String TRIAL_NAME = "פנקס הכנסות";
     private static final String TRIAL_URL = "https://script.google.com/macros/s/AKfycbyoJeN1G2EuGczP88itz2r2OKXH5GWL45c3ICe9L2kOHG2rNIFYJ98aRx0UPyZEIHyKxA/exec";
-    private static final String TRIAL_APK_URL = "https://raw.githubusercontent.com/militzerjoseph/pincas/shortcut-builder-output/output/pincas-income.apk";
+
+    // יוגדר לאחר פריסת שירות הבנייה ב-Google Apps Script.
+    private static final String BUILD_SERVICE_URL = "";
+
+    private static final String BUILD_STATUS_URL =
+            "https://raw.githubusercontent.com/militzerjoseph/pincas/shortcut-builder-output/output/build-status.json";
+    private static final String GENERATED_APK_URL =
+            "https://raw.githubusercontent.com/militzerjoseph/pincas/shortcut-builder-output/output/generated-app.apk";
 
     private EditText nameEdit;
     private EditText urlEdit;
     private TextView previewIcon;
     private TextView previewName;
     private Spinner styleSpinner;
+    private Spinner zoomSpinner;
+    private Button createButton;
+
     private int selectedColor = Color.rgb(247, 214, 119);
     private String selectedStyle = "כרטסת";
+    private int selectedZoom = 90;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,7 +85,7 @@ public class MainActivity extends Activity {
         title.setBackground(titleBg);
         root.addView(title, lpMatchWrap(0, 0, 0, 6));
 
-        TextView subtitle = text("גרסת ניסיון APK אמיתית", 17, Typeface.NORMAL, Color.WHITE);
+        TextView subtitle = text("יצירת APK לפי שם, כתובת וזום", 17, Typeface.NORMAL, Color.WHITE);
         subtitle.setGravity(Gravity.CENTER);
         subtitle.setPadding(0, 0, 0, dp(18));
         subtitle.setBackground(titleBg);
@@ -90,9 +112,9 @@ public class MainActivity extends Activity {
         LinearLayout styleCard = card("3. בחר סגנון אייקון");
         styleSpinner = new Spinner(this);
         String[] styles = {"כרטסת", "ריבוע מעוגל", "עיגול"};
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
+        ArrayAdapter<String> styleAdapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_dropdown_item, styles);
-        styleSpinner.setAdapter(adapter);
+        styleSpinner.setAdapter(styleAdapter);
         styleSpinner.setPadding(dp(8), dp(8), dp(8), dp(8));
         styleCard.addView(styleSpinner, lpMatchWrap(0, 8, 0, 0));
         root.addView(styleCard, lpMatchWrap(0, 0, 0, 12));
@@ -127,7 +149,21 @@ public class MainActivity extends Activity {
         colorCard.addView(colors, lpMatchWrap(0, 8, 0, 0));
         root.addView(colorCard, lpMatchWrap(0, 0, 0, 12));
 
-        LinearLayout previewCard = card("5. תצוגה מקדימה");
+        LinearLayout zoomCard = card("5. זום תצוגה");
+        zoomSpinner = new Spinner(this);
+        String[] zoomOptions = {"80%", "90%", "100%"};
+        ArrayAdapter<String> zoomAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_dropdown_item, zoomOptions);
+        zoomSpinner.setAdapter(zoomAdapter);
+        zoomSpinner.setSelection(1);
+        zoomSpinner.setPadding(dp(8), dp(8), dp(8), dp(8));
+        zoomCard.addView(zoomSpinner, lpMatchWrap(0, 8, 0, 0));
+        TextView zoomNote = text("ברירת המחדל היא 90%", 14, Typeface.NORMAL, Color.rgb(100,112,128));
+        zoomNote.setGravity(Gravity.RIGHT);
+        zoomCard.addView(zoomNote, lpMatchWrap(0, 4, 0, 0));
+        root.addView(zoomCard, lpMatchWrap(0, 0, 0, 12));
+
+        LinearLayout previewCard = card("6. תצוגה מקדימה");
         previewIcon = text("📁\nChatGPT", 34, Typeface.BOLD, Color.rgb(8, 92, 72));
         previewIcon.setGravity(Gravity.CENTER);
         previewIcon.setPadding(dp(18), dp(24), dp(18), dp(24));
@@ -143,11 +179,12 @@ public class MainActivity extends Activity {
         test.setOnClickListener(v -> testLink());
         root.addView(test, lpMatchWrap(0, 0, 0, 8));
 
-        Button create = button("צור APK לדוגמה", true);
-        create.setOnClickListener(v -> downloadTrialApk());
-        root.addView(create, lpMatchWrap(0, 0, 0, 8));
+        createButton = button("צור APK", true);
+        createButton.setOnClickListener(v -> requestGeneratedApk());
+        root.addView(createButton, lpMatchWrap(0, 0, 0, 8));
 
-        TextView note = text("בגרסת הניסיון הראשונה הכפתור מוריד APK עובד של הדוגמה 'פנקס הכנסות'. לאחר אישור כל התהליך נחבר את השם, הכתובת והאייקון שבחרת לבנייה אוטומטית של APK חדש.",
+        TextView note = text(
+                "השם, הכתובת והזום כבר מוכנים להתחבר לבנייה אוטומטית. בחירת סגנון וצבע האייקון עדיין נמצאת בשלב תצוגה מקדימה.",
                 14, Typeface.NORMAL, Color.rgb(100,112,128));
         note.setGravity(Gravity.CENTER);
         note.setPadding(dp(8), dp(10), dp(8), 0);
@@ -161,6 +198,13 @@ public class MainActivity extends Activity {
             }
             @Override public void onNothingSelected(AdapterView<?> parent) { }
         });
+        zoomSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                selectedZoom = position == 0 ? 80 : (position == 2 ? 100 : 90);
+            }
+            @Override public void onNothingSelected(AdapterView<?> parent) { }
+        });
+
         updatePreview();
         setContentView(scroll);
     }
@@ -196,7 +240,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void downloadTrialApk() {
+    private void requestGeneratedApk() {
         String name = nameEdit.getText().toString().trim();
         String url = normalizedUrl();
         if (url == null) return;
@@ -204,25 +248,137 @@ public class MainActivity extends Activity {
             toast("יש להזין שם לאפליקציה");
             return;
         }
+
         updatePreview();
 
-        boolean exactTrial = TRIAL_NAME.equals(name) && TRIAL_URL.equals(url);
-        String msg = exactTrial
-                ? "עכשיו ייפתח קובץ APK עובד של 'פנקס הכנסות'."
-                : "בגרסת ניסיון זו ה-APK המורד הוא עדיין דוגמת 'פנקס הכנסות'. הנתונים ששינית משמשים כרגע לבדיקת הממשק בלבד.";
+        if (TextUtils.isEmpty(BUILD_SERVICE_URL)) {
+            new AlertDialog.Builder(this)
+                    .setTitle("החיבור כמעט מוכן")
+                    .setMessage("צד הבנייה כבר מוכן. נשאר להגדיר פעם אחת את כתובת שירות הבנייה המאובטח.")
+                    .setPositiveButton("בסדר", null)
+                    .show();
+            return;
+        }
 
         new AlertDialog.Builder(this)
-                .setTitle("הורדת APK")
-                .setMessage(msg)
+                .setTitle("יצירת APK")
+                .setMessage("הבנייה תתחיל עכשיו. בדרך כלל זה לוקח דקה או שתיים.")
                 .setNegativeButton("ביטול", null)
-                .setPositiveButton("הורד", (d, which) -> {
-                    try {
-                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(TRIAL_APK_URL)));
-                    } catch (Exception e) {
-                        toast("לא ניתן לפתוח את ההורדה");
-                    }
-                })
+                .setPositiveButton("התחל", (d, which) -> startBuildRequest(name, url, selectedZoom))
                 .show();
+    }
+
+    private void startBuildRequest(String name, String url, int zoom) {
+        createButton.setEnabled(false);
+        createButton.setText("בונה APK...");
+
+        String requestId = System.currentTimeMillis() + "-" + Math.abs(new Random().nextInt());
+
+        new Thread(() -> {
+            try {
+                JSONObject body = new JSONObject();
+                body.put("app_name", name);
+                body.put("app_url", url);
+                body.put("app_zoom", zoom);
+                body.put("request_id", requestId);
+
+                String responseText = httpPostJson(BUILD_SERVICE_URL, body.toString());
+                JSONObject response = new JSONObject(responseText);
+                if (!response.optBoolean("ok", false)) {
+                    throw new Exception("build service rejected request");
+                }
+
+                boolean ready = waitForBuild(requestId);
+                runOnUiThread(() -> {
+                    createButton.setEnabled(true);
+                    createButton.setText("צור APK");
+                    if (ready) {
+                        new AlertDialog.Builder(this)
+                                .setTitle("ה-APK מוכן")
+                                .setMessage("הבנייה הסתיימה. אפשר להוריד ולהתקין את האפליקציה.")
+                                .setNegativeButton("אחר כך", null)
+                                .setPositiveButton("הורד", (d, which) -> openGeneratedApk())
+                                .show();
+                    } else {
+                        toast("הבנייה עדיין לא הסתיימה. נסה שוב בעוד דקה.");
+                    }
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    createButton.setEnabled(true);
+                    createButton.setText("צור APK");
+                    toast("לא ניתן להתחיל את הבנייה כרגע");
+                });
+            }
+        }).start();
+    }
+
+    private boolean waitForBuild(String requestId) {
+        for (int i = 0; i < 36; i++) {
+            try {
+                Thread.sleep(5000);
+                String statusText = httpGet(BUILD_STATUS_URL + "?t=" + System.currentTimeMillis());
+                JSONObject status = new JSONObject(statusText);
+                if (requestId.equals(status.optString("request_id"))) {
+                    return true;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return false;
+    }
+
+    private void openGeneratedApk() {
+        try {
+            String url = GENERATED_APK_URL + "?t=" + System.currentTimeMillis();
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+        } catch (Exception e) {
+            toast("לא ניתן לפתוח את ההורדה");
+        }
+    }
+
+    private String httpPostJson(String targetUrl, String json) throws Exception {
+        HttpURLConnection conn = (HttpURLConnection) new URL(targetUrl).openConnection();
+        conn.setRequestMethod("POST");
+        conn.setConnectTimeout(15000);
+        conn.setReadTimeout(20000);
+        conn.setDoOutput(true);
+        conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+
+        byte[] data = json.getBytes(StandardCharsets.UTF_8);
+        try (OutputStream os = conn.getOutputStream()) {
+            os.write(data);
+        }
+
+        int code = conn.getResponseCode();
+        InputStream in = code >= 200 && code < 400 ? conn.getInputStream() : conn.getErrorStream();
+        String text = readStream(in);
+        conn.disconnect();
+        if (code < 200 || code >= 400) throw new Exception("HTTP " + code);
+        return text;
+    }
+
+    private String httpGet(String targetUrl) throws Exception {
+        HttpURLConnection conn = (HttpURLConnection) new URL(targetUrl).openConnection();
+        conn.setRequestMethod("GET");
+        conn.setConnectTimeout(12000);
+        conn.setReadTimeout(12000);
+        int code = conn.getResponseCode();
+        InputStream in = code >= 200 && code < 400 ? conn.getInputStream() : conn.getErrorStream();
+        String text = readStream(in);
+        conn.disconnect();
+        if (code < 200 || code >= 400) throw new Exception("HTTP " + code);
+        return text;
+    }
+
+    private String readStream(InputStream in) throws Exception {
+        if (in == null) return "";
+        StringBuilder sb = new StringBuilder();
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = br.readLine()) != null) sb.append(line);
+        }
+        return sb.toString();
     }
 
     private String normalizedUrl() {
