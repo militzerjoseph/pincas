@@ -77,7 +77,7 @@ public class MainActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        TextView title = text("יוצר מעטפות", 30, Typeface.BOLD, Color.WHITE);
+        TextView title = text("יוצר מעטפות", 30, Typeface.BOLD, Color.rgb(255, 239, 153));
         title.setGravity(Gravity.CENTER);
         title.setPadding(dp(12), dp(20), dp(12), dp(8));
         GradientDrawable titleBg = roundRect(Color.rgb(26,115,232), 24);
@@ -115,6 +115,7 @@ public class MainActivity extends Activity {
                 android.R.layout.simple_spinner_dropdown_item, styles);
         styleSpinner.setAdapter(styleAdapter);
         styleSpinner.setPadding(dp(8), dp(8), dp(8), dp(8));
+        styleSpinner.setBackground(fieldBackground());
         styleCard.addView(styleSpinner, lpMatchWrap(0, 8, 0, 0));
         root.addView(styleCard, lpMatchWrap(0, 0, 0, 12));
 
@@ -156,6 +157,7 @@ public class MainActivity extends Activity {
         zoomSpinner.setAdapter(zoomAdapter);
         zoomSpinner.setSelection(1);
         zoomSpinner.setPadding(dp(8), dp(8), dp(8), dp(8));
+        zoomSpinner.setBackground(fieldBackground());
         zoomCard.addView(zoomSpinner, lpMatchWrap(0, 8, 0, 0));
         TextView zoomNote = text("ברירת המחדל היא 90%", 14, Typeface.NORMAL, Color.rgb(100,112,128));
         zoomNote.setGravity(Gravity.RIGHT);
@@ -431,10 +433,16 @@ public class MainActivity extends Activity {
         e.setTextSize(19);
         e.setSingleLine(false);
         e.setPadding(dp(12), dp(12), dp(12), dp(12));
-        e.setBackground(roundRect(Color.rgb(250,252,255), 14));
+        e.setBackground(fieldBackground());
         e.setTextColor(Color.rgb(25,35,50));
         e.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
         return e;
+    }
+
+    private GradientDrawable fieldBackground() {
+        GradientDrawable gd = roundRect(Color.rgb(238,244,251), 14);
+        gd.setStroke(dp(1), Color.rgb(190,205,220));
+        return gd;
     }
 
     private Button button(String label, boolean primary) {
