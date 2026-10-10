@@ -440,8 +440,8 @@ public class MainActivity extends Activity {
     }
 
     private GradientDrawable fieldBackground() {
-        GradientDrawable gd = roundRect(Color.rgb(238,244,251), 14);
-        gd.setStroke(dp(1), Color.rgb(190,205,220));
+        GradientDrawable gd = roundRect(Color.rgb(220,232,244), 14);
+        gd.setStroke(dp(2), Color.rgb(125,155,185));
         return gd;
     }
 
