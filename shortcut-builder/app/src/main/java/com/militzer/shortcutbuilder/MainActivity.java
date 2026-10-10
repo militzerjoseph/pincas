@@ -41,8 +41,7 @@ public class MainActivity extends Activity {
     private static final String TRIAL_NAME = "פנקס הכנסות";
     private static final String TRIAL_URL = "https://script.google.com/macros/s/AKfycbyoJeN1G2EuGczP88itz2r2OKXH5GWL45c3ICe9L2kOHG2rNIFYJ98aRx0UPyZEIHyKxA/exec";
 
-    // יוגדר לאחר פריסת שירות הבנייה ב-Google Apps Script.
-    private static final String BUILD_SERVICE_URL = "";
+    private static final String BUILD_SERVICE_URL = "https://script.google.com/macros/s/AKfycbw_vuH5-nlE6l1-AtP4GNRYaLTDC1X1wnRrUeUjUL1YssfK951pkd7DmMl9_bya81QF/exec";
 
     private static final String BUILD_STATUS_URL =
             "https://raw.githubusercontent.com/militzerjoseph/pincas/shortcut-builder-output/output/build-status.json";
