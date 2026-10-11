@@ -2,6 +2,21 @@ plugins {
     id 'com.android.application'
 }
 
+def generatedVersionText = System.getenv('APP_VERSION_CODE') ?: '1'
+def generatedVersionCode = 1
+try {
+    generatedVersionCode = Integer.parseInt(generatedVersionText)
+} catch (Exception ignored) {
+    generatedVersionCode = 1
+}
+generatedVersionCode = Math.max(1, generatedVersionCode)
+
+def keystorePath = System.getenv('ANDROID_KEYSTORE_PATH')
+def keystorePassword = System.getenv('ANDROID_KEYSTORE_PASSWORD')
+def keyAliasValue = System.getenv('ANDROID_KEY_ALIAS')
+def keyPasswordValue = System.getenv('ANDROID_KEY_PASSWORD')
+def signingReady = keystorePath && keystorePassword && keyAliasValue && keyPasswordValue
+
 android {
     namespace 'com.militzer.shortcutbuilder'
     compileSdk 35
@@ -10,12 +25,26 @@ android {
         applicationId 'com.militzer.shortcutbuilder'
         minSdk 26
         targetSdk 35
-        versionCode 1
-        versionName '0.1'
+        versionCode generatedVersionCode
+        versionName '1.0.' + generatedVersionCode
+    }
+
+    signingConfigs {
+        release {
+            if (signingReady) {
+                storeFile file(keystorePath)
+                storePassword keystorePassword
+                keyAlias keyAliasValue
+                keyPassword keyPasswordValue
+            }
+        }
     }
 
     buildTypes {
         release {
+            if (signingReady) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
