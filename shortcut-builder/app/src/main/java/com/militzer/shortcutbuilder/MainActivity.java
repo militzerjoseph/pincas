@@ -2,6 +2,7 @@ package com.militzer.shortcutbuilder;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.DownloadManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -11,6 +12,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
@@ -35,6 +37,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Random;
 
 public class MainActivity extends Activity {
@@ -45,7 +48,7 @@ public class MainActivity extends Activity {
     private static final String BUILD_SERVICE_URL = "https://script.google.com/macros/s/AKfycbw_vuH5-nlE6l1-AtP4GNRYaLTDC1X1wnRrUeUjUL1YssfK951pkd7DmMl9_bya81QF/exec";
 
     private static final String BUILD_STATUS_URL =
-            "https://raw.githubusercontent.com/militzerjoseph/pincas/shortcut-builder-output/output/build-status.json";
+            "https://api.github.com/repos/militzerjoseph/pincas/contents/output/build-status.json?ref=shortcut-builder-output";
     private static final String GENERATED_APK_URL =
             "https://raw.githubusercontent.com/militzerjoseph/pincas/shortcut-builder-output/output/generated-app.apk";
 
@@ -303,7 +306,8 @@ public class MainActivity extends Activity {
         createButton.setEnabled(false);
         createButton.setText("בונה APK...");
 
-        String requestId = System.currentTimeMillis() + "-" + Math.abs(new Random().nextInt());
+        long requestStartedAt = System.currentTimeMillis();
+        String requestId = requestStartedAt + "-" + Math.abs(new Random().nextInt());
 
         new Thread(() -> {
             boolean explicitReject = false;
@@ -323,19 +327,15 @@ public class MainActivity extends Activity {
                             explicitReject = true;
                         }
                     } catch (Exception ignored) {
-                        // לעיתים Google Apps Script מחזיר תגובת redirect/טקסט לאחר שהבקשה כבר נשלחה.
-                        // במקרה כזה ממשיכים לבדוק את סטטוס הבנייה במקום להציג כישלון שגוי.
                     }
                 } catch (Exception ignored) {
-                    // גם כאן ייתכן שהבקשה כבר הגיעה ל-Apps Script לפני שקריאת התגובה נכשלה.
-                    // לכן ממשיכים לבדוק אם GitHub בנה בפועל את ה-APK.
                 }
 
                 if (explicitReject) {
                     throw new Exception("build service rejected request");
                 }
 
-                boolean ready = waitForBuild(requestId);
+                boolean ready = waitForBuild(requestId, name, requestStartedAt);
                 runOnUiThread(() -> {
                     createButton.setEnabled(true);
                     createButton.setText("צור APK");
@@ -344,13 +344,14 @@ public class MainActivity extends Activity {
                                 .setTitle("ה-APK מוכן")
                                 .setMessage("הבנייה הסתיימה. אפשר להוריד ולהתקין את האפליקציה.")
                                 .setNegativeButton("אחר כך", null)
-                                .setPositiveButton("הורד", (d, which) -> openGeneratedApk())
+                                .setPositiveButton("הורד", (d, which) -> downloadGeneratedApk())
                                 .show();
                     } else {
                         new AlertDialog.Builder(this)
-                                .setTitle("הבנייה עדיין לא זוהתה")
-                                .setMessage("ייתכן שהבנייה עדיין מסתיימת. המתן מעט ונסה שוב.")
-                                .setPositiveButton("בסדר", null)
+                                .setTitle("הבדיקה האוטומטית הסתיימה")
+                                .setMessage("לא הצלחתי לאמת את סיום הבנייה, אבל ייתכן שה-APK כבר מוכן. אפשר לנסות להוריד עכשיו בלי להפעיל בנייה נוספת.")
+                                .setNegativeButton("סגור", null)
+                                .setPositiveButton("הורד עכשיו", (d, which) -> downloadGeneratedApk())
                                 .show();
                     }
                 });
@@ -364,14 +365,27 @@ public class MainActivity extends Activity {
         }).start();
     }
 
-    private boolean waitForBuild(String requestId) {
-        for (int i = 0; i < 72; i++) {
+    private boolean waitForBuild(String requestId, String appName, long requestStartedAt) {
+        for (int i = 0; i < 24; i++) {
             try {
                 Thread.sleep(5000);
-                String statusText = httpGet(BUILD_STATUS_URL + "?t=" + System.currentTimeMillis());
+                String statusText = httpGet(BUILD_STATUS_URL + "&t=" + System.currentTimeMillis());
                 JSONObject status = new JSONObject(statusText);
+
                 if (requestId.equals(status.optString("request_id"))) {
                     return true;
+                }
+
+                String statusName = status.optString("app_name");
+                String builtAt = status.optString("built_at");
+                if (appName.equals(statusName) && !TextUtils.isEmpty(builtAt)) {
+                    try {
+                        long builtAtMillis = Instant.parse(builtAt).toEpochMilli();
+                        if (builtAtMillis >= requestStartedAt - 5000) {
+                            return true;
+                        }
+                    } catch (Exception ignored) {
+                    }
                 }
             } catch (Exception ignored) {
             }
@@ -379,12 +393,35 @@ public class MainActivity extends Activity {
         return false;
     }
 
-    private void openGeneratedApk() {
+    private void downloadGeneratedApk() {
+        String url = GENERATED_APK_URL + "?t=" + System.currentTimeMillis();
         try {
-            String url = GENERATED_APK_URL + "?t=" + System.currentTimeMillis();
-            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+            DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+            if (manager == null) throw new Exception("download manager unavailable");
+
+            String fileName = "generated-app-" + System.currentTimeMillis() + ".apk";
+            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+            request.setTitle("APK חדש");
+            request.setDescription("מוריד את קובץ ההתקנה");
+            request.setMimeType("application/vnd.android.package-archive");
+            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            request.setAllowedOverMetered(true);
+            request.setAllowedOverRoaming(true);
+            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
+            manager.enqueue(request);
+
+            new AlertDialog.Builder(this)
+                    .setTitle("ההורדה התחילה")
+                    .setMessage("כשההורדה תסתיים תופיע הודעה בטלפון. אין צורך ללחוץ שוב על הורד.")
+                    .setPositiveButton("בסדר", null)
+                    .show();
         } catch (Exception e) {
-            toast("לא ניתן לפתוח את ההורדה");
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                toast("ההורדה נפתחה בדפדפן");
+            } catch (Exception ignored) {
+                toast("לא ניתן לפתוח את ההורדה");
+            }
         }
     }
 
@@ -415,6 +452,13 @@ public class MainActivity extends Activity {
         conn.setRequestMethod("GET");
         conn.setConnectTimeout(12000);
         conn.setReadTimeout(12000);
+        conn.setUseCaches(false);
+        conn.setRequestProperty("Accept", "application/vnd.github.raw+json");
+        conn.setRequestProperty("Cache-Control", "no-cache");
+        conn.setRequestProperty("Pragma", "no-cache");
+        conn.setRequestProperty("User-Agent", "ShortcutBuilder");
+        conn.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
+
         int code = conn.getResponseCode();
         InputStream in = code >= 200 && code < 400 ? conn.getInputStream() : conn.getErrorStream();
         String text = readStream(in);
