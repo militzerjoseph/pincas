@@ -37,6 +37,12 @@ jobs:
       APP_URL: ${{ inputs.app_url || 'https://script.google.com/macros/s/AKfycbyoJeN1G2EuGczP88itz2r2OKXH5GWL45c3ICe9L2kOHG2rNIFYJ98aRx0UPyZEIHyKxA/exec' }}
       APP_ZOOM: ${{ inputs.app_zoom || '90' }}
       REQUEST_ID: ${{ inputs.request_id || 'push-build' }}
+      APP_VERSION_CODE: ${{ github.run_number }}
+      ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/shortcut-builder-release.jks
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -52,32 +58,49 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Build APKs
+      - name: Prepare permanent signing key
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          test -n "$ANDROID_KEYSTORE_PASSWORD"
+          test -n "$ANDROID_KEY_ALIAS"
+          test -n "$ANDROID_KEY_PASSWORD"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$ANDROID_KEYSTORE_PATH"
+          test -s "$ANDROID_KEYSTORE_PATH"
+
+      - name: Build permanently signed APKs
         working-directory: shortcut-builder
-        run: gradle :app:assembleDebug :wrapper:assembleDebug --stacktrace
+        run: gradle :app:assembleRelease :wrapper:assembleRelease --stacktrace
 
       - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
-          name: shortcut-builder-trial-apks
+          name: shortcut-builder-signed-apks
           path: |
-            shortcut-builder/app/build/outputs/apk/debug/app-debug.apk
-            shortcut-builder/wrapper/build/outputs/apk/debug/wrapper-debug.apk
+            shortcut-builder/app/build/outputs/apk/release/app-release.apk
+            shortcut-builder/wrapper/build/outputs/apk/release/wrapper-release.apk
           if-no-files-found: error
 
-      - name: Publish trial output APK
+      - name: Publish signed output APKs
         shell: bash
         run: |
           mkdir -p /tmp/trial-output/output
-          cp shortcut-builder/app/build/outputs/apk/debug/app-debug.apk /tmp/trial-output/output/shortcut-builder-trial.apk
-          cp shortcut-builder/wrapper/build/outputs/apk/debug/wrapper-debug.apk /tmp/trial-output/output/generated-app.apk
-          cp shortcut-builder/wrapper/build/outputs/apk/debug/wrapper-debug.apk /tmp/trial-output/output/pincas-income.apk
+          cp shortcut-builder/app/build/outputs/apk/release/app-release.apk /tmp/trial-output/output/shortcut-builder-trial.apk
+          cp shortcut-builder/wrapper/build/outputs/apk/release/wrapper-release.apk /tmp/trial-output/output/generated-app.apk
+          cp shortcut-builder/wrapper/build/outputs/apk/release/wrapper-release.apk /tmp/trial-output/output/pincas-income.apk
           python - <<'PY'
-          import json, os, datetime
+          import json, os, datetime, hashlib
+          app_url = os.environ.get('APP_URL', '')
+          app_id = 'com.militzer.generated.a' + hashlib.sha256(app_url.encode('utf-8')).hexdigest()[:16]
           data = {
               'request_id': os.environ.get('REQUEST_ID', 'push-build'),
               'app_name': os.environ.get('APP_NAME', ''),
               'app_zoom': os.environ.get('APP_ZOOM', '90'),
+              'version_code': os.environ.get('APP_VERSION_CODE', '1'),
+              'application_id': app_id,
+              'signed': True,
               'built_at': datetime.datetime.now(datetime.timezone.utc).isoformat()
           }
           with open('/tmp/trial-output/output/build-status.json', 'w', encoding='utf-8') as f:
@@ -89,7 +112,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -b shortcut-builder-output
           git add output
-          git commit -m "Publish shortcut builder trial APKs"
+          git commit -m "Publish permanently signed shortcut builder APKs"
           git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push --force origin shortcut-builder-output
         env:
