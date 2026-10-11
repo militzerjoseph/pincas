@@ -2,10 +2,13 @@ package com.militzer.pincasincome;
 
 import android.app.Activity;
 import android.graphics.Color;
+import android.graphics.Insets;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.DisplayCutout;
+import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
@@ -13,9 +16,11 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
 
 public class MainActivity extends Activity {
     private WebView webView;
+    private FrameLayout root;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -24,40 +29,67 @@ public class MainActivity extends Activity {
         getWindow().setStatusBarColor(Color.WHITE);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
 
-        // Never let generated apps draw underneath a camera cutout.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             WindowManager.LayoutParams params = getWindow().getAttributes();
             params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER;
             getWindow().setAttributes(params);
         }
 
+        root = new FrameLayout(this);
+        root.setBackgroundColor(Color.WHITE);
+
         webView = new WebView(this);
         webView.setBackgroundColor(Color.WHITE);
+        root.addView(webView, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                Gravity.TOP));
 
-        // Keep the web page inside the phone's safe area. This automatically adapts
-        // to the status bar and to the camera cutout on each device.
-        webView.setOnApplyWindowInsetsListener((v, insets) -> {
-            int left = insets.getSystemWindowInsetLeft();
-            int top = insets.getSystemWindowInsetTop();
-            int right = insets.getSystemWindowInsetRight();
-            int bottom = insets.getSystemWindowInsetBottom();
+        // Apply the safe area to the OUTER container, not to the WebView itself.
+        // This is more reliable on Android 15+ edge-to-edge screens and guarantees
+        // that every generated APK starts below the status bar / camera hole.
+        root.setOnApplyWindowInsetsListener((v, insets) -> {
+            int left = 0;
+            int top = 0;
+            int right = 0;
+            int bottom = 0;
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                DisplayCutout cutout = insets.getDisplayCutout();
-                if (cutout != null) {
-                    left = Math.max(left, cutout.getSafeInsetLeft());
-                    top = Math.max(top, cutout.getSafeInsetTop());
-                    right = Math.max(right, cutout.getSafeInsetRight());
-                    bottom = Math.max(bottom, cutout.getSafeInsetBottom());
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                Insets safe = insets.getInsets(
+                        WindowInsets.Type.statusBars()
+                                | WindowInsets.Type.displayCutout()
+                                | WindowInsets.Type.navigationBars());
+                left = safe.left;
+                top = safe.top;
+                right = safe.right;
+                bottom = safe.bottom;
+            } else {
+                left = insets.getSystemWindowInsetLeft();
+                top = insets.getSystemWindowInsetTop();
+                right = insets.getSystemWindowInsetRight();
+                bottom = insets.getSystemWindowInsetBottom();
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    DisplayCutout cutout = insets.getDisplayCutout();
+                    if (cutout != null) {
+                        left = Math.max(left, cutout.getSafeInsetLeft());
+                        top = Math.max(top, cutout.getSafeInsetTop());
+                        right = Math.max(right, cutout.getSafeInsetRight());
+                        bottom = Math.max(bottom, cutout.getSafeInsetBottom());
+                    }
                 }
             }
 
-            v.setPadding(left, top, right, bottom);
+            // Small extra breathing room plus a minimum top safe band. This keeps
+            // headers clear of centered punch-hole cameras even when a device reports
+            // an unusually small inset.
+            int safeTop = Math.max(top + dp(8), dp(36));
+            v.setPadding(left, safeTop, right, bottom);
             return insets;
         });
 
-        setContentView(webView);
-        webView.requestApplyInsets();
+        setContentView(root);
+        root.requestApplyInsets();
 
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(true);
@@ -79,9 +111,6 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-
-                // Re-apply after the page has finished loading. Some sites rewrite
-                // their viewport during startup, so repeat shortly afterwards too.
                 applySelectedZoom(view);
                 view.postDelayed(() -> applySelectedZoom(view), 350);
                 view.postDelayed(() -> applySelectedZoom(view), 1000);
@@ -93,6 +122,10 @@ public class MainActivity extends Activity {
         } else {
             webView.restoreState(savedInstanceState);
         }
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     private void applySelectedZoom(WebView view) {
