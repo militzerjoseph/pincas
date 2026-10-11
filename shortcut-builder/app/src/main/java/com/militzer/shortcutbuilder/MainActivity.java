@@ -2,11 +2,8 @@ package com.militzer.shortcutbuilder;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.job.JobInfo;
-import android.app.job.JobScheduler;
 import android.content.ClipData;
 import android.content.ClipboardManager;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
@@ -14,7 +11,6 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.PersistableBundle;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
@@ -287,7 +283,7 @@ public class MainActivity extends Activity {
 
         new AlertDialog.Builder(this)
                 .setTitle("יצירת APK")
-                .setMessage("הבנייה תתחיל ברקע. מיד אחרי השליחה אפשר לצאת מהאפליקציה. כשה-APK יהיה מוכן הוא יורד אוטומטית לתיקיית Downloads.")
+                .setMessage("הבנייה תתחיל מיד ותמשיך ברקע. אפשר לצאת מהאפליקציה אחרי הופעת ההודעה. כשה-APK יהיה מוכן הוא יורד אוטומטית לתיקיית Downloads.")
                 .setNegativeButton("ביטול", null)
                 .setPositiveButton("התחל", (d, which) -> startBuildRequest(name, url, selectedZoom))
                 .show();
@@ -299,26 +295,16 @@ public class MainActivity extends Activity {
 
         HistoryStore.addRequest(this, requestId, name, requestStartedAt);
 
-        PersistableBundle extras = new PersistableBundle();
-        extras.putString(BuildJobService.KEY_NAME, name);
-        extras.putString(BuildJobService.KEY_URL, url);
-        extras.putInt(BuildJobService.KEY_ZOOM, zoom);
-        extras.putString(BuildJobService.KEY_REQUEST_ID, requestId);
-        extras.putLong(BuildJobService.KEY_STARTED_AT, requestStartedAt);
+        Intent serviceIntent = new Intent(this, BuildForegroundService.class);
+        serviceIntent.putExtra(BuildForegroundService.KEY_NAME, name);
+        serviceIntent.putExtra(BuildForegroundService.KEY_URL, url);
+        serviceIntent.putExtra(BuildForegroundService.KEY_ZOOM, zoom);
+        serviceIntent.putExtra(BuildForegroundService.KEY_REQUEST_ID, requestId);
+        serviceIntent.putExtra(BuildForegroundService.KEY_STARTED_AT, requestStartedAt);
 
-        int jobId = requestId.hashCode() & 0x7fffffff;
-        if (jobId == 0) jobId = 1;
-
-        JobInfo jobInfo = new JobInfo.Builder(jobId, new ComponentName(this, BuildJobService.class))
-                .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
-                .setExtras(extras)
-                .setOverrideDeadline(1000)
-                .build();
-
-        JobScheduler scheduler = (JobScheduler) getSystemService(Context.JOB_SCHEDULER_SERVICE);
-        int result = scheduler == null ? JobScheduler.RESULT_FAILURE : scheduler.schedule(jobInfo);
-
-        if (result != JobScheduler.RESULT_SUCCESS) {
+        try {
+            startForegroundService(serviceIntent);
+        } catch (Exception e) {
             HistoryStore.updateStatus(this, requestId, "לא ניתן להתחיל");
             toast("לא ניתן להתחיל את הבנייה כרגע");
             return;
@@ -328,20 +314,14 @@ public class MainActivity extends Activity {
         createButton.postDelayed(() -> createButton.setText("צור APK"), 1500);
 
         new AlertDialog.Builder(this)
-                .setTitle("הבקשה נשלחה")
-                .setMessage("אפשר לצאת עכשיו מיוצר המעטפות. הבנייה תמשיך ברקע, וכשה-APK יהיה מוכן ההורדה תתחיל אוטומטית. אפשר לבדוק את המצב ב'היסטוריית יצירה והורדה'.")
+                .setTitle("הבנייה התחילה")
+                .setMessage("אפשר לצאת עכשיו מיוצר המעטפות. תופיע הודעה קבועה בזמן הבנייה, וכשה-APK יהיה מוכן ההורדה תתחיל אוטומטית. אפשר לעקוב גם ב'היסטוריית יצירה והורדה'.")
                 .setPositiveButton("בסדר", null)
                 .show();
     }
 
     private boolean hasActiveBuild() {
-        JobScheduler scheduler = (JobScheduler) getSystemService(Context.JOB_SCHEDULER_SERVICE);
-        if (scheduler == null) return false;
-        ComponentName wanted = new ComponentName(this, BuildJobService.class);
-        for (JobInfo job : scheduler.getAllPendingJobs()) {
-            if (wanted.equals(job.getService())) return true;
-        }
-        return false;
+        return BuildForegroundService.isRunning();
     }
 
     private String normalizedUrl() {
