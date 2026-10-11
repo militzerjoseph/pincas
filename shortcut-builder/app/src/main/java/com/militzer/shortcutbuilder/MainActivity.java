@@ -19,6 +19,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Spinner;
@@ -120,22 +121,41 @@ public class MainActivity extends Activity {
         root.addView(styleCard, lpMatchWrap(0, 0, 0, 12));
 
         LinearLayout colorCard = card("4. צבע האייקון");
+
+        HorizontalScrollView colorScroll = new HorizontalScrollView(this);
+        colorScroll.setHorizontalScrollBarEnabled(true);
+        colorScroll.setFillViewport(false);
+
         LinearLayout colors = new LinearLayout(this);
         colors.setOrientation(LinearLayout.HORIZONTAL);
-        colors.setGravity(Gravity.CENTER);
+        colors.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         colors.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
+
         int[] palette = {
                 Color.rgb(247,214,119),
                 Color.rgb(255,255,255),
                 Color.rgb(157,210,255),
                 Color.rgb(169,232,153),
                 Color.rgb(255,176,198),
-                Color.rgb(195,195,195)
+                Color.rgb(195,195,195),
+                Color.rgb(221,190,255),
+                Color.rgb(255,205,145),
+                Color.rgb(255,150,150),
+                Color.rgb(135,224,214),
+                Color.rgb(145,180,255),
+                Color.rgb(255,238,135),
+                Color.rgb(205,245,170),
+                Color.rgb(180,225,255),
+                Color.rgb(235,190,215),
+                Color.rgb(210,210,245),
+                Color.rgb(190,235,225),
+                Color.rgb(240,210,175)
         };
+
         for (int c : palette) {
             View swatch = new View(this);
             GradientDrawable gd = roundRect(c, 14);
-            gd.setStroke(dp(1), Color.rgb(210,216,225));
+            gd.setStroke(dp(1), Color.rgb(165,178,194));
             swatch.setBackground(gd);
             LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(dp(46), dp(46));
             sp.setMargins(dp(5), dp(5), dp(5), dp(5));
@@ -146,7 +166,17 @@ public class MainActivity extends Activity {
             });
             colors.addView(swatch);
         }
-        colorCard.addView(colors, lpMatchWrap(0, 8, 0, 0));
+
+        colorScroll.addView(colors, new HorizontalScrollView.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        colorCard.addView(colorScroll, lpMatchWrap(0, 8, 0, 0));
+
+        TextView colorNote = text("החלק ימינה או שמאלה כדי לראות צבעים נוספים", 14,
+                Typeface.NORMAL, Color.rgb(100,112,128));
+        colorNote.setGravity(Gravity.RIGHT);
+        colorCard.addView(colorNote, lpMatchWrap(0, 4, 0, 0));
+
         root.addView(colorCard, lpMatchWrap(0, 0, 0, 12));
 
         LinearLayout zoomCard = card("5. זום תצוגה");
@@ -276,6 +306,8 @@ public class MainActivity extends Activity {
         String requestId = System.currentTimeMillis() + "-" + Math.abs(new Random().nextInt());
 
         new Thread(() -> {
+            boolean explicitReject = false;
+
             try {
                 JSONObject body = new JSONObject();
                 body.put("app_name", name);
@@ -283,9 +315,23 @@ public class MainActivity extends Activity {
                 body.put("app_zoom", zoom);
                 body.put("request_id", requestId);
 
-                String responseText = httpPostJson(BUILD_SERVICE_URL, body.toString());
-                JSONObject response = new JSONObject(responseText);
-                if (!response.optBoolean("ok", false)) {
+                try {
+                    String responseText = httpPostJson(BUILD_SERVICE_URL, body.toString());
+                    try {
+                        JSONObject response = new JSONObject(responseText);
+                        if (response.has("ok") && !response.optBoolean("ok", true)) {
+                            explicitReject = true;
+                        }
+                    } catch (Exception ignored) {
+                        // לעיתים Google Apps Script מחזיר תגובת redirect/טקסט לאחר שהבקשה כבר נשלחה.
+                        // במקרה כזה ממשיכים לבדוק את סטטוס הבנייה במקום להציג כישלון שגוי.
+                    }
+                } catch (Exception ignored) {
+                    // גם כאן ייתכן שהבקשה כבר הגיעה ל-Apps Script לפני שקריאת התגובה נכשלה.
+                    // לכן ממשיכים לבדוק אם GitHub בנה בפועל את ה-APK.
+                }
+
+                if (explicitReject) {
                     throw new Exception("build service rejected request");
                 }
 
@@ -301,7 +347,11 @@ public class MainActivity extends Activity {
                                 .setPositiveButton("הורד", (d, which) -> openGeneratedApk())
                                 .show();
                     } else {
-                        toast("הבנייה עדיין לא הסתיימה. נסה שוב בעוד דקה.");
+                        new AlertDialog.Builder(this)
+                                .setTitle("הבנייה עדיין לא זוהתה")
+                                .setMessage("ייתכן שהבנייה עדיין מסתיימת. המתן מעט ונסה שוב.")
+                                .setPositiveButton("בסדר", null)
+                                .show();
                     }
                 });
             } catch (Exception e) {
@@ -315,7 +365,7 @@ public class MainActivity extends Activity {
     }
 
     private boolean waitForBuild(String requestId) {
-        for (int i = 0; i < 36; i++) {
+        for (int i = 0; i < 72; i++) {
             try {
                 Thread.sleep(5000);
                 String statusText = httpGet(BUILD_STATUS_URL + "?t=" + System.currentTimeMillis());
@@ -344,6 +394,7 @@ public class MainActivity extends Activity {
         conn.setConnectTimeout(15000);
         conn.setReadTimeout(20000);
         conn.setDoOutput(true);
+        conn.setInstanceFollowRedirects(true);
         conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
 
         byte[] data = json.getBytes(StandardCharsets.UTF_8);
