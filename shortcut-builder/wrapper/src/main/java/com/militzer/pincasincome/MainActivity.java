@@ -2,9 +2,12 @@ package com.militzer.pincasincome;
 
 import android.app.Activity;
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
+import android.view.DisplayCutout;
 import android.view.View;
 import android.view.WindowInsets;
+import android.view.WindowManager;
 import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -21,14 +24,35 @@ public class MainActivity extends Activity {
         getWindow().setStatusBarColor(Color.WHITE);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
 
+        // Never let generated apps draw underneath a camera cutout.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            WindowManager.LayoutParams params = getWindow().getAttributes();
+            params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER;
+            getWindow().setAttributes(params);
+        }
+
         webView = new WebView(this);
         webView.setBackgroundColor(Color.WHITE);
 
-        // Keep the web page below the status bar / camera cutout.
+        // Keep the web page inside the phone's safe area. This automatically adapts
+        // to the status bar and to the camera cutout on each device.
         webView.setOnApplyWindowInsetsListener((v, insets) -> {
+            int left = insets.getSystemWindowInsetLeft();
             int top = insets.getSystemWindowInsetTop();
+            int right = insets.getSystemWindowInsetRight();
             int bottom = insets.getSystemWindowInsetBottom();
-            v.setPadding(0, top, 0, bottom);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                DisplayCutout cutout = insets.getDisplayCutout();
+                if (cutout != null) {
+                    left = Math.max(left, cutout.getSafeInsetLeft());
+                    top = Math.max(top, cutout.getSafeInsetTop());
+                    right = Math.max(right, cutout.getSafeInsetRight());
+                    bottom = Math.max(bottom, cutout.getSafeInsetBottom());
+                }
+            }
+
+            v.setPadding(left, top, right, bottom);
             return insets;
         });
 
