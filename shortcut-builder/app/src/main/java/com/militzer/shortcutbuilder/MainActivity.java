@@ -2,9 +2,11 @@ package com.militzer.shortcutbuilder;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.DownloadManager;
+import android.app.job.JobInfo;
+import android.app.job.JobScheduler;
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
@@ -12,7 +14,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
+import android.os.PersistableBundle;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
@@ -28,29 +30,12 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.json.JSONObject;
-
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.util.Random;
 
 public class MainActivity extends Activity {
 
     private static final String TRIAL_NAME = "פנקס הכנסות";
     private static final String TRIAL_URL = "https://script.google.com/macros/s/AKfycbyoJeN1G2EuGczP88itz2r2OKXH5GWL45c3ICe9L2kOHG2rNIFYJ98aRx0UPyZEIHyKxA/exec";
-
-    private static final String BUILD_SERVICE_URL = "https://script.google.com/macros/s/AKfycbw_vuH5-nlE6l1-AtP4GNRYaLTDC1X1wnRrUeUjUL1YssfK951pkd7DmMl9_bya81QF/exec";
-
-    private static final String BUILD_STATUS_URL =
-            "https://api.github.com/repos/militzerjoseph/pincas/contents/output/build-status.json?ref=shortcut-builder-output";
-    private static final String GENERATED_APK_URL =
-            "https://raw.githubusercontent.com/militzerjoseph/pincas/shortcut-builder-output/output/generated-app.apk";
 
     private EditText nameEdit;
     private EditText urlEdit;
@@ -217,8 +202,12 @@ public class MainActivity extends Activity {
         createButton.setOnClickListener(v -> requestGeneratedApk());
         root.addView(createButton, lpMatchWrap(0, 0, 0, 8));
 
+        Button history = button("היסטוריית יצירה והורדה", false);
+        history.setOnClickListener(v -> startActivity(new Intent(this, HistoryActivity.class)));
+        root.addView(history, lpMatchWrap(0, 0, 0, 8));
+
         TextView note = text(
-                "השם, הכתובת והזום כבר מוכנים להתחבר לבנייה אוטומטית. בחירת סגנון וצבע האייקון עדיין נמצאת בשלב תצוגה מקדימה.",
+                "אחרי שליחת הבנייה אפשר לצאת מהאפליקציה. ה-APK ייבנה ברקע ויורד אוטומטית ל-Downloads כשהוא מוכן. בחירת סגנון וצבע האייקון עדיין נמצאת בשלב תצוגה מקדימה.",
                 14, Typeface.NORMAL, Color.rgb(100,112,128));
         note.setGravity(Gravity.CENTER);
         note.setPadding(dp(8), dp(10), dp(8), 0);
@@ -285,196 +274,74 @@ public class MainActivity extends Activity {
 
         updatePreview();
 
-        if (TextUtils.isEmpty(BUILD_SERVICE_URL)) {
+        if (hasActiveBuild()) {
             new AlertDialog.Builder(this)
-                    .setTitle("החיבור כמעט מוכן")
-                    .setMessage("צד הבנייה כבר מוכן. נשאר להגדיר פעם אחת את כתובת שירות הבנייה המאובטח.")
-                    .setPositiveButton("בסדר", null)
+                    .setTitle("כבר מתבצעת בנייה")
+                    .setMessage("יש כרגע APK שנבנה ברקע. אפשר לעקוב אחריו במסך ההיסטוריה וליצור APK חדש לאחר שיסתיים.")
+                    .setPositiveButton("פתח היסטוריה", (d, which) ->
+                            startActivity(new Intent(this, HistoryActivity.class)))
+                    .setNegativeButton("סגור", null)
                     .show();
             return;
         }
 
         new AlertDialog.Builder(this)
                 .setTitle("יצירת APK")
-                .setMessage("הבנייה תתחיל עכשיו. בדרך כלל זה לוקח דקה או שתיים.")
+                .setMessage("הבנייה תתחיל ברקע. מיד אחרי השליחה אפשר לצאת מהאפליקציה. כשה-APK יהיה מוכן הוא יורד אוטומטית לתיקיית Downloads.")
                 .setNegativeButton("ביטול", null)
                 .setPositiveButton("התחל", (d, which) -> startBuildRequest(name, url, selectedZoom))
                 .show();
     }
 
     private void startBuildRequest(String name, String url, int zoom) {
-        createButton.setEnabled(false);
-        createButton.setText("בונה APK...");
-
         long requestStartedAt = System.currentTimeMillis();
         String requestId = requestStartedAt + "-" + Math.abs(new Random().nextInt());
 
-        new Thread(() -> {
-            boolean explicitReject = false;
+        HistoryStore.addRequest(this, requestId, name, requestStartedAt);
 
-            try {
-                JSONObject body = new JSONObject();
-                body.put("app_name", name);
-                body.put("app_url", url);
-                body.put("app_zoom", zoom);
-                body.put("request_id", requestId);
+        PersistableBundle extras = new PersistableBundle();
+        extras.putString(BuildJobService.KEY_NAME, name);
+        extras.putString(BuildJobService.KEY_URL, url);
+        extras.putInt(BuildJobService.KEY_ZOOM, zoom);
+        extras.putString(BuildJobService.KEY_REQUEST_ID, requestId);
+        extras.putLong(BuildJobService.KEY_STARTED_AT, requestStartedAt);
 
-                try {
-                    String responseText = httpPostJson(BUILD_SERVICE_URL, body.toString());
-                    try {
-                        JSONObject response = new JSONObject(responseText);
-                        if (response.has("ok") && !response.optBoolean("ok", true)) {
-                            explicitReject = true;
-                        }
-                    } catch (Exception ignored) {
-                    }
-                } catch (Exception ignored) {
-                }
+        int jobId = requestId.hashCode() & 0x7fffffff;
+        if (jobId == 0) jobId = 1;
 
-                if (explicitReject) {
-                    throw new Exception("build service rejected request");
-                }
+        JobInfo jobInfo = new JobInfo.Builder(jobId, new ComponentName(this, BuildJobService.class))
+                .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+                .setExtras(extras)
+                .setOverrideDeadline(1000)
+                .build();
 
-                boolean ready = waitForBuild(requestId, name, requestStartedAt);
-                runOnUiThread(() -> {
-                    createButton.setEnabled(true);
-                    createButton.setText("צור APK");
-                    if (ready) {
-                        new AlertDialog.Builder(this)
-                                .setTitle("ה-APK מוכן")
-                                .setMessage("הבנייה הסתיימה. אפשר להוריד ולהתקין את האפליקציה.")
-                                .setNegativeButton("אחר כך", null)
-                                .setPositiveButton("הורד", (d, which) -> downloadGeneratedApk())
-                                .show();
-                    } else {
-                        new AlertDialog.Builder(this)
-                                .setTitle("הבדיקה האוטומטית הסתיימה")
-                                .setMessage("לא הצלחתי לאמת את סיום הבנייה, אבל ייתכן שה-APK כבר מוכן. אפשר לנסות להוריד עכשיו בלי להפעיל בנייה נוספת.")
-                                .setNegativeButton("סגור", null)
-                                .setPositiveButton("הורד עכשיו", (d, which) -> downloadGeneratedApk())
-                                .show();
-                    }
-                });
-            } catch (Exception e) {
-                runOnUiThread(() -> {
-                    createButton.setEnabled(true);
-                    createButton.setText("צור APK");
-                    toast("לא ניתן להתחיל את הבנייה כרגע");
-                });
-            }
-        }).start();
+        JobScheduler scheduler = (JobScheduler) getSystemService(Context.JOB_SCHEDULER_SERVICE);
+        int result = scheduler == null ? JobScheduler.RESULT_FAILURE : scheduler.schedule(jobInfo);
+
+        if (result != JobScheduler.RESULT_SUCCESS) {
+            HistoryStore.updateStatus(this, requestId, "לא ניתן להתחיל");
+            toast("לא ניתן להתחיל את הבנייה כרגע");
+            return;
+        }
+
+        createButton.setText("הבקשה נשלחה");
+        createButton.postDelayed(() -> createButton.setText("צור APK"), 1500);
+
+        new AlertDialog.Builder(this)
+                .setTitle("הבקשה נשלחה")
+                .setMessage("אפשר לצאת עכשיו מיוצר המעטפות. הבנייה תמשיך ברקע, וכשה-APK יהיה מוכן ההורדה תתחיל אוטומטית. אפשר לבדוק את המצב ב'היסטוריית יצירה והורדה'.")
+                .setPositiveButton("בסדר", null)
+                .show();
     }
 
-    private boolean waitForBuild(String requestId, String appName, long requestStartedAt) {
-        for (int i = 0; i < 24; i++) {
-            try {
-                Thread.sleep(5000);
-                String statusText = httpGet(BUILD_STATUS_URL + "&t=" + System.currentTimeMillis());
-                JSONObject status = new JSONObject(statusText);
-
-                if (requestId.equals(status.optString("request_id"))) {
-                    return true;
-                }
-
-                String statusName = status.optString("app_name");
-                String builtAt = status.optString("built_at");
-                if (appName.equals(statusName) && !TextUtils.isEmpty(builtAt)) {
-                    try {
-                        long builtAtMillis = Instant.parse(builtAt).toEpochMilli();
-                        if (builtAtMillis >= requestStartedAt - 5000) {
-                            return true;
-                        }
-                    } catch (Exception ignored) {
-                    }
-                }
-            } catch (Exception ignored) {
-            }
+    private boolean hasActiveBuild() {
+        JobScheduler scheduler = (JobScheduler) getSystemService(Context.JOB_SCHEDULER_SERVICE);
+        if (scheduler == null) return false;
+        ComponentName wanted = new ComponentName(this, BuildJobService.class);
+        for (JobInfo job : scheduler.getAllPendingJobs()) {
+            if (wanted.equals(job.getService())) return true;
         }
         return false;
-    }
-
-    private void downloadGeneratedApk() {
-        String url = GENERATED_APK_URL + "?t=" + System.currentTimeMillis();
-        try {
-            DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
-            if (manager == null) throw new Exception("download manager unavailable");
-
-            String fileName = "generated-app-" + System.currentTimeMillis() + ".apk";
-            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
-            request.setTitle("APK חדש");
-            request.setDescription("מוריד את קובץ ההתקנה");
-            request.setMimeType("application/vnd.android.package-archive");
-            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-            request.setAllowedOverMetered(true);
-            request.setAllowedOverRoaming(true);
-            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
-            manager.enqueue(request);
-
-            new AlertDialog.Builder(this)
-                    .setTitle("ההורדה התחילה")
-                    .setMessage("כשההורדה תסתיים תופיע הודעה בטלפון. אין צורך ללחוץ שוב על הורד.")
-                    .setPositiveButton("בסדר", null)
-                    .show();
-        } catch (Exception e) {
-            try {
-                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
-                toast("ההורדה נפתחה בדפדפן");
-            } catch (Exception ignored) {
-                toast("לא ניתן לפתוח את ההורדה");
-            }
-        }
-    }
-
-    private String httpPostJson(String targetUrl, String json) throws Exception {
-        HttpURLConnection conn = (HttpURLConnection) new URL(targetUrl).openConnection();
-        conn.setRequestMethod("POST");
-        conn.setConnectTimeout(15000);
-        conn.setReadTimeout(20000);
-        conn.setDoOutput(true);
-        conn.setInstanceFollowRedirects(true);
-        conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-
-        byte[] data = json.getBytes(StandardCharsets.UTF_8);
-        try (OutputStream os = conn.getOutputStream()) {
-            os.write(data);
-        }
-
-        int code = conn.getResponseCode();
-        InputStream in = code >= 200 && code < 400 ? conn.getInputStream() : conn.getErrorStream();
-        String text = readStream(in);
-        conn.disconnect();
-        if (code < 200 || code >= 400) throw new Exception("HTTP " + code);
-        return text;
-    }
-
-    private String httpGet(String targetUrl) throws Exception {
-        HttpURLConnection conn = (HttpURLConnection) new URL(targetUrl).openConnection();
-        conn.setRequestMethod("GET");
-        conn.setConnectTimeout(12000);
-        conn.setReadTimeout(12000);
-        conn.setUseCaches(false);
-        conn.setRequestProperty("Accept", "application/vnd.github.raw+json");
-        conn.setRequestProperty("Cache-Control", "no-cache");
-        conn.setRequestProperty("Pragma", "no-cache");
-        conn.setRequestProperty("User-Agent", "ShortcutBuilder");
-        conn.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
-
-        int code = conn.getResponseCode();
-        InputStream in = code >= 200 && code < 400 ? conn.getInputStream() : conn.getErrorStream();
-        String text = readStream(in);
-        conn.disconnect();
-        if (code < 200 || code >= 400) throw new Exception("HTTP " + code);
-        return text;
-    }
-
-    private String readStream(InputStream in) throws Exception {
-        if (in == null) return "";
-        StringBuilder sb = new StringBuilder();
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = br.readLine()) != null) sb.append(line);
-        }
-        return sb.toString();
     }
 
     private String normalizedUrl() {
