@@ -4,7 +4,8 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'hadashot-v1-source.zip'
+      - 'hadashot_transform.py'
+      - 'hadashot-icon-b64/**'
       - '.github/workflows/build-hadashot-v1.yml'
 
 jobs:
@@ -35,20 +36,53 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Verify source archive
-        run: unzip -t hadashot-v1-source.zip
-
-      - name: Unpack project
+      - name: Rebuild Manyot V6 source
         run: |
+          cat manyot-v6-parts/part00 \
+              manyot-v6-parts/part01 \
+              manyot-v6-parts/part02 \
+              manyot-v6-parts/part03 \
+              manyot-v6-parts/part04 \
+              manyot-v6-parts/part05 \
+              manyot-v6-parts/part06 \
+              manyot-v6-parts/part07 \
+              manyot-v6-parts/part08 > manyot-v6-source.zip
+          unzip -t manyot-v6-source.zip
           rm -rf hadashot-build
           mkdir hadashot-build
-          unzip -q hadashot-v1-source.zip -d hadashot-build
+          unzip -q manyot-v6-source.zip -d hadashot-build
+
+      - name: Transform to Hadashot V1
+        run: python hadashot_transform.py
+
+      - name: Install approved Hadashot icon
+        shell: bash
+        run: |
+          cat hadashot-icon-b64/00 hadashot-icon-b64/01 hadashot-icon-b64/02 | base64 -d > hadashot-icon.webp
+          file hadashot-icon.webp
+          cp hadashot-icon.webp hadashot-build/manyot_android_v1/app/src/main/res/drawable-nodpi/ic_launcher.webp
+
+      - name: Verify Hadashot source
+        shell: bash
+        run: |
+          grep -q "applicationId 'com.militzerjoseph.hadashot'" hadashot-build/manyot_android_v1/app/build.gradle
+          grep -q "const APP_NAME='חדשות'" hadashot-build/manyot_android_v1/app/src/main/assets/index.html
+          grep -q "getLaunchableApps" hadashot-build/manyot_android_v1/app/src/main/java/com/militzerjoseph/manyot/MainActivity.java
+          grep -q "openInstalledAppsPicker" hadashot-build/manyot_android_v1/app/src/main/assets/index.html
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          t=Path('hadashot-build/manyot_android_v1/app/src/main/assets/index.html').read_text(encoding='utf-8')
+          js=re.search(r'<script>(.*)</script>',t,re.S).group(1)
+          Path('/tmp/hadashot.js').write_text(js,encoding='utf-8')
+          PY
+          node --check /tmp/hadashot.js
 
       - name: Build unsigned release APK
-        run: gradle -p hadashot-build/hadashot_android_v1 assembleRelease
+        run: gradle -p hadashot-build/manyot_android_v1 assembleRelease
 
       - name: Prepare APK
-        run: cp hadashot-build/hadashot_android_v1/app/build/outputs/apk/release/app-release-unsigned.apk Hadashot_V1_unsigned.apk
+        run: cp hadashot-build/manyot_android_v1/app/build/outputs/apk/release/app-release-unsigned.apk Hadashot_V1_unsigned.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
