@@ -1,0 +1,272 @@
+diff -ruN '--exclude=*.webp' v2src/manyot_android_v1/app/build.gradle manyot_v3_src/manyot_android_v1/app/build.gradle
+--- v2src/manyot_android_v1/app/build.gradle	2026-10-12 06:45:26.000000000 +0000
++++ manyot_v3_src/manyot_android_v1/app/build.gradle	2026-10-12 08:32:25.000000000 +0000
+@@ -10,7 +10,7 @@
+         applicationId 'com.militzerjoseph.manyot'
+         minSdk 26
+         targetSdk 35
+-        versionCode 2
+-        versionName '2.0'
++        versionCode 3
++        versionName '3.0'
+     }
+ }
+diff -ruN '--exclude=*.webp' v2src/manyot_android_v1/app/src/main/AndroidManifest.xml manyot_v3_src/manyot_android_v1/app/src/main/AndroidManifest.xml
+--- v2src/manyot_android_v1/app/src/main/AndroidManifest.xml	2026-10-12 05:49:40.000000000 +0000
++++ manyot_v3_src/manyot_android_v1/app/src/main/AndroidManifest.xml	2026-10-12 08:32:25.000000000 +0000
+@@ -1,6 +1,12 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+     <uses-permission android:name="android.permission.INTERNET" />
++    <queries>
++        <intent>
++            <action android:name="android.intent.action.MAIN" />
++            <category android:name="android.intent.category.LAUNCHER" />
++        </intent>
++    </queries>
+     <application
+         android:allowBackup="true"
+         android:label="@string/app_name"
+diff -ruN '--exclude=*.webp' v2src/manyot_android_v1/app/src/main/assets/index.html manyot_v3_src/manyot_android_v1/app/src/main/assets/index.html
+--- v2src/manyot_android_v1/app/src/main/assets/index.html	2026-10-12 06:41:41.000000000 +0000
++++ manyot_v3_src/manyot_android_v1/app/src/main/assets/index.html	2026-10-12 08:32:25.000000000 +0000
+@@ -4,7 +4,7 @@
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+ <meta name="theme-color" content="#111111">
+-<title>מניות - גרסה 5</title>
++<title>מניות - גרסה 6</title>
+ <style>
+ *{box-sizing:border-box}
+ html,body{margin:0;min-height:100%;background:var(--ui-page-bg,#f5f5f5);color:#111;font-family:Arial,"Noto Sans Hebrew",sans-serif}
+@@ -69,6 +69,11 @@
+ .segment button.on{background:#111;color:#fff}
+ .urlrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;direction:ltr;align-items:stretch}
+ .paste{border:0;border-radius:14px;background:#111;color:#fff;padding:0 12px;font-weight:700;min-width:122px;white-space:nowrap}
++.app-picker{border:1px solid #ddd;border-radius:14px;background:#fafafa;padding:10px}
++.app-picker.hidden{display:none}
++.app-picker button{width:100%;border:0;border-radius:12px;background:#222;color:#fff;padding:12px 14px;font-size:18px;font-weight:700}
++.app-picker small{display:block;color:#666;margin-top:7px;font-size:13px;line-height:1.35;text-align:right}
++.app-picked{margin-top:7px;font-size:14px;color:#333;word-break:break-all}
+ .save{width:100%;border:0;border-radius:14px;background:#111;color:#fff;padding:14px;font-size:20px;font-weight:700;margin-top:0}
+ .close{width:100%;border:0;border-radius:14px;background:#eee;padding:13px;font-size:18px;margin-top:8px}
+ .danger{background:#ffe4e8!important;color:#c7001c!important;font-weight:700}
+@@ -160,7 +165,7 @@
+ <div id="toast" class="toast"></div>
+ 
+ <script>
+-const APP_VERSION='5';
++const APP_VERSION='6';
+ const APP_NAME='מניות';
+ const STOCKS_ID='f_stocks';
+ const STORAGE_KEY='MANYOT_STANDALONE_V1';
+@@ -338,7 +343,7 @@
+     <div class="settings-section"><h3>📖 חוברת הפעלה</h3>
+       <ol class="manual-list">
+         <li><b>פתיחת קישור</b>לחיצה רגילה על קיצור דרך פותחת אותו.</li>
+-        <li><b>הוספת קישור</b>לחץ על ‎+🔗‎ למעלה, בחר אתר או אפליקציה, הקלד שם וכתובת ושמור.</li>
++        <li><b>הוספת קישור</b>לחץ על ‎+🔗‎ למעלה. עבור אתר הקלד שם וכתובת. עבור אפליקציה לחץ „בחר אפליקציה מהטלפון”, בחר מהרשימה ושמור.</li>
+         <li><b>עריכה ומחיקה</b>לחיצה ארוכה על קיצור דרך פותחת ישר את מסך השינוי. במסך העריכה ניתן גם למחוק.</li>
+         <li><b>גיבוי</b>כפתור גיבוי שומר את הקישורים וגם את הגדרות העיצוב של התוכנית.</li>
+         <li><b>שחזור</b>אפשר לשחזר גיבוי של „מניות”, וגם גיבוי ישן של „תיקיות 1” שמכיל את תיקיית מניות.</li>
+@@ -485,8 +490,9 @@
+   openOverlayHtml(`<h2>הוספת קיצור דרך</h2>
+     <div class="form-stack">
+       <div class="segment"><button id="webBtn" class="on" onclick="setType('website')">אתר</button><button id="appBtn" onclick="setType('app')">אפליקציה</button></div>
++      <div id="appPickerWrap" class="app-picker hidden"><button onclick="pickInstalledApp()">בחר אפליקציה מהטלפון</button><small>לאחר הבחירה השם והאפליקציה ימולאו אוטומטית.</small><div id="appPickedInfo" class="app-picked"></div></div>
+       <input id="editTitle" class="field" placeholder="שם הקישור" autofocus>
+-      <div class="urlrow"><input id="editUrl" class="field" dir="ltr" placeholder="https://..."><button class="paste" onclick="pasteUrl()">הדבק URL</button></div>
++      <div class="urlrow"><input id="editUrl" class="field" dir="ltr" placeholder="https://... או app:package"><button class="paste" onclick="pasteUrl()">הדבק URL</button></div>
+     </div>
+     <div class="sticky-actions"><button class="save" onclick="saveNewLinkFromForm()">שמור</button><button class="close" onclick="closeOverlay()">ביטול</button></div>`,{view:'overlay'},'#overlay',true);
+ }
+@@ -495,8 +501,9 @@
+   const x=`<h2>עריכת קיצור דרך</h2>
+     <div class="form-stack">
+       <div class="segment"><button id="webBtn" class="${editType==='website'?'on':''}" onclick="setType('website')">אתר</button><button id="appBtn" class="${editType==='app'?'on':''}" onclick="setType('app')">אפליקציה</button></div>
++      <div id="appPickerWrap" class="app-picker ${editType==='app'?'':'hidden'}"><button onclick="pickInstalledApp()">בחר אפליקציה מהטלפון</button><small>אפשר לבחור מחדש אפליקציה מותקנת.</small><div id="appPickedInfo" class="app-picked">${editType==='app'&&String(l.url||'').startsWith('app:')?esc(String(l.url).slice(4)):''}</div></div>
+       <input id="editTitle" class="field" value="${esc(l.title)}" placeholder="שם הקישור" autofocus>
+-      <div class="urlrow"><input id="editUrl" class="field" dir="ltr" value="${esc(l.url||'')}" placeholder="https://..."><button class="paste" onclick="pasteUrl()">הדבק URL</button></div>
++      <div class="urlrow"><input id="editUrl" class="field" dir="ltr" value="${esc(l.url||'')}" placeholder="https://... או app:package"><button class="paste" onclick="pasteUrl()">הדבק URL</button></div>
+     </div>
+     <div class="sticky-actions">
+       <button class="save" onclick="saveEdit()">שמור</button>
+@@ -505,7 +512,28 @@
+     </div>`;
+   replaceCurrent&&document.getElementById('ov')?replaceOverlayHtml(x,true):openOverlayHtml(x,{view:'overlay'},'#overlay',true);
+ }
+-function setType(t){editType=t;document.getElementById('webBtn')?.classList.toggle('on',t==='website');document.getElementById('appBtn')?.classList.toggle('on',t==='app');}
++function setType(t){
++  editType=t;
++  document.getElementById('webBtn')?.classList.toggle('on',t==='website');
++  document.getElementById('appBtn')?.classList.toggle('on',t==='app');
++  document.getElementById('appPickerWrap')?.classList.toggle('hidden',t!=='app');
++}
++function pickInstalledApp(){
++  if(window.AndroidApps?.pickInstalledApp){window.AndroidApps.pickInstalledApp();return;}
++  toast('בחירת אפליקציה זמינה בגרסת APK');
++}
++function onAndroidAppPicked(label,packageName){
++  editType='app';
++  setType('app');
++  const title=document.getElementById('editTitle');
++  const url=document.getElementById('editUrl');
++  const info=document.getElementById('appPickedInfo');
++  if(title)title.value=String(label||packageName||'אפליקציה');
++  if(url)url.value='app:'+String(packageName||'');
++  if(info)info.textContent=String(packageName||'');
++  toast('האפליקציה נבחרה');
++}
++window.onAndroidAppPicked=onAndroidAppPicked;
+ async function pasteUrl(){
+   const input=document.getElementById('editUrl');
+   if(!input)return;
+@@ -578,6 +606,14 @@
+ function openShortcut(id){
+   const l=findLink(id);if(!l)return;
+   if(!l.url)return openEdit(id,false);
++  if(l.shortcutType==='app'&&String(l.url).startsWith('app:')){
++    const pkg=String(l.url).slice(4).trim();
++    if(pkg&&window.AndroidApps?.openPackage){
++      try{if(window.AndroidApps.openPackage(pkg))return;}catch(e){}
++    }
++    toast('לא ניתן לפתוח את האפליקציה');
++    return;
++  }
+   const isAndroid=/Android/i.test(navigator.userAgent||'');
+   const isPlay=/play\.google\.com\/store\/apps\/details/i.test(l.url||'');
+   if(isAndroid&&(l.shortcutType==='app'||isPlay)){
+diff -ruN '--exclude=*.webp' v2src/manyot_android_v1/app/src/main/java/com/militzerjoseph/manyot/MainActivity.java manyot_v3_src/manyot_android_v1/app/src/main/java/com/militzerjoseph/manyot/MainActivity.java
+--- v2src/manyot_android_v1/app/src/main/java/com/militzerjoseph/manyot/MainActivity.java	2026-10-12 05:46:22.000000000 +0000
++++ manyot_v3_src/manyot_android_v1/app/src/main/java/com/militzerjoseph/manyot/MainActivity.java	2026-10-12 08:32:25.000000000 +0000
+@@ -1,11 +1,14 @@
+ package com.militzerjoseph.manyot;
+ 
+ import android.app.Activity;
++import android.app.AlertDialog;
+ import android.content.ActivityNotFoundException;
+ import android.content.ClipData;
+ import android.content.ClipboardManager;
+ import android.content.Context;
+ import android.content.Intent;
++import android.content.pm.PackageManager;
++import android.content.pm.ResolveInfo;
+ import android.net.Uri;
+ import android.os.Bundle;
+ import android.provider.Settings;
+@@ -18,7 +21,15 @@
+ import android.webkit.WebViewClient;
+ import android.widget.Toast;
+ 
++import org.json.JSONObject;
++
+ import java.io.OutputStream;
++import java.util.ArrayList;
++import java.util.Collections;
++import java.util.Comparator;
++import java.util.LinkedHashMap;
++import java.util.List;
++import java.util.Map;
+ import java.nio.charset.StandardCharsets;
+ 
+ public class MainActivity extends Activity {
+@@ -46,6 +57,7 @@
+ 
+         webView.addJavascriptInterface(new ClipboardBridge(), "AndroidClipboard");
+         webView.addJavascriptInterface(new FileBridge(), "AndroidFile");
++        webView.addJavascriptInterface(new AppBridge(), "AndroidApps");
+ 
+         webView.setWebChromeClient(new WebChromeClient() {
+             @Override
+@@ -141,6 +153,91 @@
+         }
+     }
+ 
++    private static class AppChoice {
++        final String label;
++        final String packageName;
++        AppChoice(String label, String packageName) {
++            this.label = label;
++            this.packageName = packageName;
++        }
++    }
++
++    public class AppBridge {
++        @JavascriptInterface
++        public void pickInstalledApp() {
++            runOnUiThread(() -> showInstalledAppsDialog());
++        }
++
++        @JavascriptInterface
++        public boolean openPackage(String packageName) {
++            if (packageName == null || packageName.trim().isEmpty()) return false;
++            try {
++                Intent launch = getPackageManager().getLaunchIntentForPackage(packageName.trim());
++                if (launch == null) {
++                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "לא ניתן לפתוח את האפליקציה", Toast.LENGTH_SHORT).show());
++                    return false;
++                }
++                runOnUiThread(() -> {
++                    try { startActivity(launch); }
++                    catch (Exception e) { Toast.makeText(MainActivity.this, "לא ניתן לפתוח את האפליקציה", Toast.LENGTH_SHORT).show(); }
++                });
++                return true;
++            } catch (Exception e) {
++                return false;
++            }
++        }
++    }
++
++    private void showInstalledAppsDialog() {
++        try {
++            PackageManager pm = getPackageManager();
++            Intent launcher = new Intent(Intent.ACTION_MAIN, null);
++            launcher.addCategory(Intent.CATEGORY_LAUNCHER);
++            List<ResolveInfo> resolved = pm.queryIntentActivities(launcher, PackageManager.MATCH_ALL);
++
++            Map<String, AppChoice> unique = new LinkedHashMap<>();
++            for (ResolveInfo ri : resolved) {
++                if (ri.activityInfo == null || ri.activityInfo.packageName == null) continue;
++                String pkg = ri.activityInfo.packageName;
++                if (getPackageName().equals(pkg)) continue;
++                CharSequence labelSeq = ri.loadLabel(pm);
++                String label = labelSeq == null ? pkg : labelSeq.toString().trim();
++                if (label.isEmpty()) label = pkg;
++                unique.put(pkg, new AppChoice(label, pkg));
++            }
++
++            List<AppChoice> apps = new ArrayList<>(unique.values());
++            Collections.sort(apps, new Comparator<AppChoice>() {
++                @Override
++                public int compare(AppChoice a, AppChoice b) {
++                    return a.label.compareToIgnoreCase(b.label);
++                }
++            });
++
++            if (apps.isEmpty()) {
++                Toast.makeText(this, "לא נמצאו אפליקציות לבחירה", Toast.LENGTH_SHORT).show();
++                return;
++            }
++
++            String[] labels = new String[apps.size()];
++            for (int i = 0; i < apps.size(); i++) labels[i] = apps.get(i).label;
++
++            new AlertDialog.Builder(this)
++                    .setTitle("בחר אפליקציה")
++                    .setItems(labels, (dialog, which) -> {
++                        AppChoice chosen = apps.get(which);
++                        String js = "window.onAndroidAppPicked && window.onAndroidAppPicked("
++                                + JSONObject.quote(chosen.label) + ","
++                                + JSONObject.quote(chosen.packageName) + ");";
++                        webView.evaluateJavascript(js, null);
++                    })
++                    .setNegativeButton("ביטול", null)
++                    .show();
++        } catch (Exception e) {
++            Toast.makeText(this, "לא ניתן להציג את רשימת האפליקציות", Toast.LENGTH_SHORT).show();
++        }
++    }
++
+     @Override
+     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+         super.onActivityResult(requestCode, resultCode, data);

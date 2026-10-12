@@ -1,0 +1,94 @@
+name: Build Manyot V6 Fixed
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'manyot-v6.patch'
+      - '.github/workflows/build-manyot-v6-fixed.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK 35
+        shell: bash
+        run: |
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          fi
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Rebuild known-good base project
+        run: |
+          cat manyot-android-parts/part00 \
+              manyot-android-parts/part01 \
+              manyot-android-parts/part02 \
+              manyot-android-parts/part03 \
+              manyot-android-parts/part04 \
+              manyot-android-parts/part05 \
+              manyot-android-parts/part06 \
+              manyot-android-parts/part07 \
+              manyot-android-parts/part08 > manyot-base.zip
+          unzip -t manyot-base.zip
+          rm -rf manyot-build
+          mkdir manyot-build
+          unzip -q manyot-base.zip -d manyot-build
+
+      - name: Reapply approved V5 changes
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          import re, textwrap
+          wf = Path('.github/workflows/build-manyot-apk.yml').read_text(encoding='utf-8')
+          start = wf.index('- name: Apply Manyot V5 update')
+          tail = wf[start:]
+          m = re.search(r"run: \|\n(?P<body>.*?)(?=\n\s{6}- name: )", tail, re.S)
+          if not m:
+              raise SystemExit('Could not locate V5 update step')
+          body = textwrap.dedent(m.group('body'))
+          m2 = re.search(r"python <<'PY'\n(.*?)\nPY", body, re.S)
+          if not m2:
+              raise SystemExit('Could not locate V5 Python patch')
+          code = m2.group(1)
+          exec(compile(code, '<v5-update>', 'exec'), {})
+          PY
+
+      - name: Apply V6 installed-app picker update
+        run: patch -p1 -d manyot-build < manyot-v6.patch
+
+      - name: Verify V6 source markers
+        run: |
+          grep -q "const APP_VERSION='6'" manyot-build/manyot_android_v1/app/src/main/assets/index.html
+          grep -q "pickInstalledApp" manyot-build/manyot_android_v1/app/src/main/java/com/militzerjoseph/manyot/MainActivity.java
+          grep -q "versionCode 3" manyot-build/manyot_android_v1/app/build.gradle
+
+      - name: Build unsigned release APK
+        run: gradle -p manyot-build/manyot_android_v1 assembleRelease
+
+      - name: Prepare APK
+        run: cp manyot-build/manyot_android_v1/app/build/outputs/apk/release/app-release-unsigned.apk Manyot_V6_unsigned.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: manyot-v6-unsigned-apk
+          path: Manyot_V6_unsigned.apk
+          if-no-files-found: error
