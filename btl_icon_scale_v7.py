@@ -12,6 +12,7 @@ s=re.sub(r"versionName\s+'[^']+'","versionName '7.0'",s)
 g.write_text(s,encoding='utf-8')
 
 # Settings UI: V6 large becomes V7 medium; add a new larger size.
+# Default text color in V7 is black.
 p=root/'app/src/main/assets/index.html'
 t=p.read_text(encoding='utf-8')
 t=re.sub(r'<title>ביטוח לאומי - גרסה \d+</title>','<title>ביטוח לאומי - גרסה 7</title>',t)
@@ -20,12 +21,18 @@ t=t.replace('.icon-preview-text.small{font-size:24px}.icon-preview-text.normal{f
             '.icon-preview-text.small{font-size:28px}.icon-preview-text.normal{font-size:32px}.icon-preview-text.large{font-size:36px}')
 t=t.replace("onclick=\"setLauncherIconTextSize('normal')\">רגיל</button>",
             "onclick=\"setLauncherIconTextSize('normal')\">בינוני</button>")
-t=t.replace('כיתוב רגיל ולבן', 'כיתוב בינוני ולבן')
+t=t.replace("let launcherIconSettings={background:'medium',grid:true,textSize:'normal',textColor:'white'};",
+            "let launcherIconSettings={background:'medium',grid:true,textSize:'normal',textColor:'black'};")
+t=t.replace("function resetLauncherIcon(){launcherIconSettings={background:'medium',grid:true,textSize:'normal',textColor:'white'};",
+            "function resetLauncherIcon(){launcherIconSettings={background:'medium',grid:true,textSize:'normal',textColor:'black'};")
+t=t.replace('כיתוב רגיל ולבן', 'כיתוב בינוני ושחור')
+t=t.replace('כיתוב בינוני ולבן', 'כיתוב בינוני ושחור')
 t=t.replace('הכיתוב הוגדל והודגש, ונשאר שורת רשת אחת למעלה.',
-            'הכיתוב נשאר באותו עובי, הועלה עוד שורת רשת אחת, והגודל שהיה גדול בגרסה הקודמת הוא כעת בינוני.')
+            'הכיתוב נשאר באותו עובי, הועלה עוד שורת רשת אחת, והגודל שהיה גדול בגרסה הקודמת הוא כעת בינוני. ברירת המחדל של צבע הכיתוב היא שחור.')
 p.write_text(t,encoding='utf-8')
 
 # Java: fresh aliases for Samsung launcher + one-time migration of old V6 "large" to V7 "normal".
+# Default text color fallback is black.
 j=root/'app/src/main/java/com/militzerjoseph/manyot/MainActivity.java'
 s=j.read_text(encoding='utf-8')
 s=s.replace(' + color + "_v6";', ' + color + "_v7";')
@@ -36,13 +43,15 @@ new='''            String size = p.getString("textSize", "normal");
                 if ("large".equals(size)) size = "normal";
                 p.edit().putString("textSize", size).putBoolean("v7_size_migrated", true).apply();
             }
-            String color = p.getString("textColor", "white");'''
+            String color = p.getString("textColor", "black");'''
 if old not in s:
     raise SystemExit('Could not add V7 size migration')
 s=s.replace(old,new,1)
+s=s.replace('valid(textColor, TEXT_COLORS, "white")','valid(textColor, TEXT_COLORS, "black")')
 j.write_text(s,encoding='utf-8')
 
 # Manifest: fresh alias names force launcher refresh after update.
+# Default alias and application icon use black text.
 manifest=root/'app/src/main/AndroidManifest.xml'
 ET.register_namespace('android','http://schemas.android.com/apk/res/android')
 ns='{http://schemas.android.com/apk/res/android}'
@@ -53,10 +62,15 @@ count=0
 for alias in app.findall('activity-alias'):
     name=alias.get(ns+'name','')
     if name.endswith('_v6') and name.startswith('com.militzerjoseph.manyot.Icon_'):
-        alias.set(ns+'name',name[:-3]+'_v7')
+        new_name=name[:-3]+'_v7'
+        alias.set(ns+'name',new_name)
+        alias.set(ns+'enabled','true' if new_name.endswith('Icon_medium_grid_normal_black_v7') else 'false')
         count+=1
 if count!=120:
     raise SystemExit(f'Expected 120 V6 aliases, got {count}')
+app.set(ns+'icon','@drawable/ic_btl_medium_grid_normal_black')
+if ns+'roundIcon' in app.attrib:
+    app.set(ns+'roundIcon','@drawable/ic_btl_medium_grid_normal_black')
 tree.write(manifest,encoding='utf-8',xml_declaration=True)
 
 # Rebuild all 120 icons.
@@ -149,4 +163,4 @@ for bg_name,bg in backgrounds.items():
                 mode='grid' if use_grid else 'plain'
                 im.save(icon_dir/f'ic_btl_{bg_name}_{mode}_{size_name}_{color_name}.png',optimize=True)
 
-print('BTL V7 ready: center y=522, sizes 210/240/270, V6 large=V7 medium, weight unchanged')
+print('BTL V7 ready: center y=522, sizes 210/240/270, V6 large=V7 medium, default text black, weight unchanged')
