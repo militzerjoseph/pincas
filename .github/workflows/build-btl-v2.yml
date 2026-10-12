@@ -1,0 +1,148 @@
+name: Build BTL V2
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'btl_transform.py'
+      - 'btl_icon_settings_v2.py'
+      - '.github/workflows/build-btl-v2.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK 35
+        shell: bash
+        run: |
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          fi
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Install Pillow
+        run: python -m pip install --disable-pip-version-check pillow
+
+      - name: Rebuild known-good Manyot base
+        run: |
+          cat manyot-android-parts/part00 \
+              manyot-android-parts/part01 \
+              manyot-android-parts/part02 \
+              manyot-android-parts/part03 \
+              manyot-android-parts/part04 \
+              manyot-android-parts/part05 \
+              manyot-android-parts/part06 \
+              manyot-android-parts/part07 \
+              manyot-android-parts/part08 > manyot-base.zip
+          unzip -t manyot-base.zip
+          rm -rf btl-build
+          mkdir btl-build
+          unzip -q manyot-base.zip -d btl-build
+
+      - name: Reapply approved V5 changes
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          import re, textwrap, shutil
+          wf = Path('.github/workflows/build-manyot-apk.yml').read_text(encoding='utf-8')
+          start = wf.index('- name: Apply Manyot V5 update')
+          tail = wf[start:]
+          m = re.search(r"run: \|\n(?P<body>.*?)(?=\n\s{6}- name: )", tail, re.S)
+          if not m: raise SystemExit('Could not locate V5 update step')
+          body = textwrap.dedent(m.group('body'))
+          m2 = re.search(r"python <<'PY'\n(.*?)\nPY", body, re.S)
+          if not m2: raise SystemExit('Could not locate V5 Python patch')
+          shutil.rmtree('manyot-build', ignore_errors=True)
+          shutil.copytree('btl-build','manyot-build')
+          exec(compile(m2.group(1), '<v5-update>', 'exec'), {})
+          shutil.rmtree('btl-build', ignore_errors=True)
+          shutil.move('manyot-build','btl-build')
+          PY
+
+      - name: Apply Manyot V6 app support
+        shell: bash
+        run: |
+          rm -rf manyot-build
+          cp -a btl-build manyot-build
+          patch -p1 -d manyot-build < manyot-v6.patch || true
+          python <<'PY'
+          from pathlib import Path
+          import re
+          root=Path('manyot-build/manyot_android_v1')
+          p=root/'app/src/main/assets/index.html'
+          t=p.read_text(encoding='utf-8')
+          t=re.sub(r'<title>מניות - גרסה \d+</title>','<title>מניות - גרסה 6</title>',t)
+          t=re.sub(r"const APP_VERSION='\d+';","const APP_VERSION='6';",t)
+          p.write_text(t,encoding='utf-8')
+          g=root/'app/build.gradle'
+          s=g.read_text(encoding='utf-8')
+          s=re.sub(r'versionCode\s+\d+','versionCode 3',s)
+          s=re.sub(r"versionName\s+'[^']+'","versionName '3.0'",s)
+          g.write_text(s,encoding='utf-8')
+          PY
+          rm -rf btl-build
+          mv manyot-build btl-build
+
+      - name: Apply full Tikiot3-style app picker
+        shell: bash
+        run: |
+          rm -rf hadashot-build
+          cp -a btl-build hadashot-build
+          python hadashot_transform.py
+          rm -rf btl-build
+          mv hadashot-build btl-build
+
+      - name: Transform to BTL V1 base
+        run: python btl_transform.py
+
+      - name: Add BTL V2 launcher icon settings
+        run: python btl_icon_settings_v2.py
+
+      - name: Verify BTL V2 source
+        shell: bash
+        run: |
+          grep -q "applicationId 'com.militzerjoseph.btl'" btl-build/manyot_android_v1/app/build.gradle
+          grep -q "versionCode 2" btl-build/manyot_android_v1/app/build.gradle
+          grep -q "const APP_VERSION='2'" btl-build/manyot_android_v1/app/src/main/assets/index.html
+          grep -q "openIconSettings" btl-build/manyot_android_v1/app/src/main/assets/index.html
+          grep -q '"AndroidIcon"' btl-build/manyot_android_v1/app/src/main/java/com/militzerjoseph/manyot/MainActivity.java
+          grep -q "Icon_medium_grid_normal" btl-build/manyot_android_v1/app/src/main/AndroidManifest.xml
+          test "$(find btl-build/manyot_android_v1/app/src/main/res/drawable-nodpi -name 'ic_btl_*.png' | wc -l)" -eq 18
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          t=Path('btl-build/manyot_android_v1/app/src/main/assets/index.html').read_text(encoding='utf-8')
+          js=re.search(r'<script>(.*)</script>',t,re.S).group(1)
+          Path('/tmp/btl-v2.js').write_text(js,encoding='utf-8')
+          PY
+          node --check /tmp/btl-v2.js
+
+      - name: Build unsigned release APK
+        run: gradle -p btl-build/manyot_android_v1 assembleRelease
+
+      - name: Prepare APK
+        run: cp btl-build/manyot_android_v1/app/build/outputs/apk/release/app-release-unsigned.apk BTL_V2_unsigned.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: btl-v2-unsigned-apk
+          path: BTL_V2_unsigned.apk
+          if-no-files-found: error
