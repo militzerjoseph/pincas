@@ -1,0 +1,68 @@
+name: Build Manyot V6 APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'manyot-v6-parts/**'
+      - '.github/workflows/build-manyot-v6.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK 35
+        shell: bash
+        run: |
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          fi
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Rebuild project archive
+        run: |
+          cat manyot-v6-parts/part00 \
+              manyot-v6-parts/part01 \
+              manyot-v6-parts/part02 \
+              manyot-v6-parts/part03 \
+              manyot-v6-parts/part04 \
+              manyot-v6-parts/part05 \
+              manyot-v6-parts/part06 \
+              manyot-v6-parts/part07 \
+              manyot-v6-parts/part08 > manyot-v6-source.zip
+          unzip -t manyot-v6-source.zip
+
+      - name: Unpack project
+        run: |
+          rm -rf manyot-build
+          mkdir manyot-build
+          unzip -q manyot-v6-source.zip -d manyot-build
+
+      - name: Build unsigned release APK
+        run: gradle -p manyot-build/manyot_android_v1 assembleRelease
+
+      - name: Prepare APK
+        run: cp manyot-build/manyot_android_v1/app/build/outputs/apk/release/app-release-unsigned.apk Manyot_V6_unsigned.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: manyot-v6-unsigned-apk
+          path: Manyot_V6_unsigned.apk
+          if-no-files-found: error
