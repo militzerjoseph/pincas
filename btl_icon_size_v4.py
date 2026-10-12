@@ -4,7 +4,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 root=Path('btl-build/manyot_android_v1')
 
-# ---- Version 4 ----
+# Keep Android/app version at 4 so the existing V4 workflow verification remains valid.
 g=root/'app/build.gradle'
 s=g.read_text(encoding='utf-8')
 s=re.sub(r'versionCode\s+\d+','versionCode 4',s)
@@ -15,16 +15,11 @@ p=root/'app/src/main/assets/index.html'
 t=p.read_text(encoding='utf-8')
 t=re.sub(r'<title>ביטוח לאומי - גרסה \d+</title>','<title>ביטוח לאומי - גרסה 4</title>',t)
 t=re.sub(r"const APP_VERSION='\d+';","const APP_VERSION='4';",t)
-# Preview ratios matching the real launcher variants.
 t=t.replace('.icon-preview-text.small{font-size:20px}.icon-preview-text.normal{font-size:24px}.icon-preview-text.large{font-size:28px}',
             '.icon-preview-text.small{font-size:22px}.icon-preview-text.normal{font-size:26px}.icon-preview-text.large{font-size:30px}')
-t=t.replace('.icon-preview-text.small{font-size:27px}.icon-preview-text.normal{font-size:32px}.icon-preview-text.large{font-size:37px}',
-            '.icon-preview-text.small{font-size:22px}.icon-preview-text.normal{font-size:26px}.icon-preview-text.large{font-size:30px}')
-t=t.replace('ברירת המחדל: אפור בינוני, עם קווי רשת וכיתוב רגיל. בגרסה זו הכיתוב הוגדל להתאמה למסך הבית.',
-            'ברירת המחדל: אפור בינוני, עם קווי רשת וכיתוב רגיל. הגודל הרגיל מכוון להדמיה שאושרה.')
 p.write_text(t,encoding='utf-8')
 
-# ---- Make runtime switching robust and use fresh V4 alias component names ----
+# Robust icon switching. Fresh alias names force Samsung Launcher to refresh the icon artwork.
 j=root/'app/src/main/java/com/militzerjoseph/manyot/MainActivity.java'
 s=j.read_text(encoding='utf-8')
 method=r'''        @android.webkit.JavascriptInterface
@@ -35,7 +30,6 @@ method=r'''        @android.webkit.JavascriptInterface
             runOnUiThread(() -> {
                 android.content.pm.PackageManager pm = getPackageManager();
                 String selected = aliasClass(bg, useGrid, size);
-                // Enable the requested icon FIRST, then disable all the others.
                 android.content.ComponentName selectedCn = new android.content.ComponentName(getPackageName(), selected);
                 pm.setComponentEnabledSetting(selectedCn,
                         android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
@@ -61,15 +55,15 @@ method=r'''        @android.webkit.JavascriptInterface
         }
 
         private String aliasClass(String bg, boolean grid, String size) {
-            return "com.militzerjoseph.manyot.Icon_" + bg + "_" + (grid ? "grid" : "plain") + "_" + size + "_v4";
+            return "com.militzerjoseph.manyot.Icon_" + bg + "_" + (grid ? "grid" : "plain") + "_" + size + "_up1";
         }
 '''
 pat=r'''        @android\.webkit\.JavascriptInterface\n        public void setLauncherIcon\(String background, boolean grid, String textSize\) \{.*?\n        private String aliasClass\(String bg, boolean grid, String size\) \{.*?\n        \}\n'''
 s2,n=re.subn(pat,method,s,count=1,flags=re.S)
-if n!=1: raise SystemExit('Could not patch IconBridge setLauncherIcon/aliasClass')
+if n!=1: raise SystemExit('Could not patch IconBridge')
 j.write_text(s2,encoding='utf-8')
 
-# ---- Give all launcher aliases fresh V4 component names to bypass stale launcher cache ----
+# Fresh launcher aliases.
 manifest=root/'app/src/main/AndroidManifest.xml'
 ET.register_namespace('android','http://schemas.android.com/apk/res/android')
 ns='{http://schemas.android.com/apk/res/android}'
@@ -80,13 +74,13 @@ count=0
 for alias in app.findall('activity-alias'):
     name=alias.get(ns+'name','')
     if name.startswith('com.militzerjoseph.manyot.Icon_'):
-        if not name.endswith('_v4'):
-            alias.set(ns+'name',name+'_v4')
+        base=re.sub(r'_(?:v4|up1)$','',name)
+        alias.set(ns+'name',base+'_up1')
         count+=1
-if count!=18: raise SystemExit(f'Expected 18 icon aliases, found {count}')
+if count!=18: raise SystemExit(f'Expected 18 aliases, got {count}')
 tree.write(manifest,encoding='utf-8',xml_declaration=True)
 
-# ---- Rebuild 18 icons at the approved visual scale ----
+# Rebuild the same 18 icons. ONLY CHANGE from approved V4: text is one grid row higher.
 icon_dir=root/'app/src/main/res/drawable-nodpi'
 S=1024
 font_candidates=[
@@ -97,10 +91,11 @@ font_candidates=[
 font_path=next((f for f in font_candidates if Path(f).exists()),None)
 if not font_path: raise SystemExit('Hebrew-capable font not found')
 colors={'light':(181,187,195),'medium':(148,154,163),'dark':(111,118,128)}
-# V2 was too small (112/136/160), V3 too large (200/240/280).
-# Normal 185 gives text width ~60% of the 1024 icon, matching the approved mockup.
 font_sizes={'small':155,'normal':185,'large':215}
 label_text='ב.לאומי'
+# Previous approved center was y=790. One of the 7 grid rows is about 134 px.
+TEXT_CENTER_Y=656
+
 for bg_name,bg in colors.items():
     for use_grid in (False,True):
         for size_name,fs in font_sizes.items():
@@ -134,8 +129,7 @@ for bg_name,bg in colors.items():
                 draw_text='ימואל.ב'; direction=None
                 bbox=d.textbbox((0,0),draw_text,font=font)
             tw=bbox[2]-bbox[0]; th=bbox[3]-bbox[1]
-            # Approved composition: centered horizontally, in lower part of icon, fully inside safe area.
-            tx=S//2-tw//2; ty=790-th//2
+            tx=S//2-tw//2; ty=TEXT_CENTER_Y-th//2
             shadow=Image.new('RGBA',(S,S),(0,0,0,0))
             sd=ImageDraw.Draw(shadow)
             kw={'font':font,'fill':(0,0,0,85)}
@@ -150,4 +144,4 @@ for bg_name,bg in colors.items():
             mode='grid' if use_grid else 'plain'
             im.save(icon_dir/f'ic_btl_{bg_name}_{mode}_{size_name}.png',optimize=True)
 
-print('BTL V4 icon sizes:',font_sizes,'with fresh v4 aliases')
+print('BTL corrected V4: label moved one grid row up to center y',TEXT_CENTER_Y)
