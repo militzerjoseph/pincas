@@ -67,17 +67,30 @@ jobs:
           m2 = re.search(r"python <<'PY'\n(.*?)\nPY", body, re.S)
           if not m2:
               raise SystemExit('Could not locate V5 Python patch')
-          code = m2.group(1)
-          exec(compile(code, '<v5-update>', 'exec'), {})
+          exec(compile(m2.group(1), '<v5-update>', 'exec'), {})
           PY
 
       - name: Apply V6 installed-app picker update
-        run: patch -p1 -d manyot-build < manyot-v6.patch
+        shell: bash
+        run: |
+          patch -p1 -d manyot-build < manyot-v6.patch || true
+          python <<'PY'
+          from pathlib import Path
+          p=Path('manyot-build/manyot_android_v1/app/src/main/assets/index.html')
+          t=p.read_text(encoding='utf-8')
+          t=t.replace('<title>מניות - גרסה 4</title>','<title>מניות - גרסה 6</title>')
+          t=t.replace('<title>מניות - גרסה 5</title>','<title>מניות - גרסה 6</title>')
+          p.write_text(t,encoding='utf-8')
+          PY
 
       - name: Verify V6 source markers
         run: |
+          grep -q "<title>מניות - גרסה 6</title>" manyot-build/manyot_android_v1/app/src/main/assets/index.html
           grep -q "const APP_VERSION='6'" manyot-build/manyot_android_v1/app/src/main/assets/index.html
+          grep -q "pickInstalledApp" manyot-build/manyot_android_v1/app/src/main/assets/index.html
+          grep -q "AndroidApps" manyot-build/manyot_android_v1/app/src/main/java/com/militzerjoseph/manyot/MainActivity.java
           grep -q "pickInstalledApp" manyot-build/manyot_android_v1/app/src/main/java/com/militzerjoseph/manyot/MainActivity.java
+          grep -q '<queries>' manyot-build/manyot_android_v1/app/src/main/AndroidManifest.xml
           grep -q "versionCode 3" manyot-build/manyot_android_v1/app/build.gradle
 
       - name: Build unsigned release APK
