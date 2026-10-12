@@ -4,7 +4,6 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'manyot-android-parts/**'
       - '.github/workflows/build-manyot-apk.yml'
 
 jobs:
@@ -54,15 +53,166 @@ jobs:
           mkdir manyot-build
           unzip -q manyot-android-v1-source.zip -d manyot-build
 
+      - name: Apply Manyot V5 update
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          p=Path('manyot-build/manyot_android_v1/app/src/main/assets/index.html')
+          text=p.read_text(encoding='utf-8')
+          text=text.replace('<title>מניות - גרסה 4</title>','<title>מניות - גרסה 5</title>')
+          text=text.replace("const APP_VERSION='4';","const APP_VERSION='5';")
+          text=text.replace(""".overlay{position:fixed;inset:0;background:#0007;z-index:30;display:flex;align-items:flex-end}
+          .sheet{width:100%;background:#fff;border-radius:24px 24px 0 0;padding:20px;max-height:90vh;overflow:auto}
+          .sheet h2{margin:4px 0 14px;font-size:27px}
+          """,""".overlay{position:fixed;inset:0;background:#0007;z-index:30;display:flex;align-items:flex-end;z-index:30}
+          .sheet{width:100%;background:#fff;border-radius:24px 24px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:82dvh;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+          .sheet h2{margin:2px 0 12px;font-size:24px;line-height:1.12}
+          .form-stack{display:grid;gap:8px}
+          .sticky-actions{position:sticky;bottom:calc(-16px - env(safe-area-inset-bottom,0px));background:#fff;padding-top:10px;padding-bottom:calc(6px + env(safe-area-inset-bottom,0px));margin-top:8px}
+          """)
+          text=text.replace('.field{width:100%;padding:14px;border:2px solid #777;border-radius:14px;font-size:20px;margin:7px 0}', '.field{width:100%;padding:12px;border:2px solid #777;border-radius:14px;font-size:18px;margin:0}')
+          text=text.replace('.segment{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}', '.segment{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}')
+          text=text.replace('.segment button{border:0;border-radius:12px;padding:12px;background:#ddd;font-size:19px}', '.segment button{border:0;border-radius:12px;padding:11px;background:#ddd;font-size:18px}')
+          text=text.replace('.urlrow{display:grid;grid-template-columns:1fr auto;gap:8px;direction:ltr}', '.urlrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;direction:ltr;align-items:stretch}')
+          text=text.replace('.paste{border:0;border-radius:14px;background:#111;color:#fff;padding:0 12px;font-weight:700}', '.paste{border:0;border-radius:14px;background:#111;color:#fff;padding:0 12px;font-weight:700;min-width:122px;white-space:nowrap}')
+          text=text.replace('.save{width:100%;border:0;border-radius:14px;background:#111;color:#fff;padding:15px;font-size:21px;font-weight:700;margin-top:10px}', '.save{width:100%;border:0;border-radius:14px;background:#111;color:#fff;padding:14px;font-size:20px;font-weight:700;margin-top:0}')
+          text=text.replace('.close{width:100%;border:0;border-radius:14px;background:#eee;padding:13px;font-size:19px;margin-top:8px}', '.close{width:100%;border:0;border-radius:14px;background:#eee;padding:13px;font-size:18px;margin-top:8px}')
+          text=text.replace('.actionmenu button{border:0;background:#f1f1f1;padding:15px 16px;font-size:21px;text-align:right;border-radius:14px}', '.actionmenu button{border:0;background:#f1f1f1;padding:14px 16px;font-size:19px;text-align:right;border-radius:14px}')
+          text=text.replace("""@media(max-width:390px){
+            .grid{gap:12px;padding:12px}
+            .folder{min-height:118px;padding-top:20px}
+            .name{font-size:21px}
+            .icon{bottom:3px}
+          }
+          ""","""@media(max-width:390px){
+            .grid{gap:12px;padding:12px}
+            .folder{min-height:118px;padding-top:20px}
+            .name{font-size:21px}
+            .icon{bottom:3px}
+            .sheet{max-height:78dvh;padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px))}
+            .sheet h2{font-size:21px}
+            .field{font-size:17px;padding:11px}
+            .segment button,.close,.save,.paste,.actionmenu button{font-size:17px}
+            .paste{min-width:114px}
+          }
+          """)
+          text=text.replace('<li><b>עריכה ומחיקה</b>לחיצה ארוכה על קיצור דרך פותחת שינוי. במסך העריכה ניתן גם למחוק.</li>', '<li><b>עריכה ומחיקה</b>לחיצה ארוכה על קיצור דרך פותחת ישר את מסך השינוי. במסך העריכה ניתן גם למחוק.</li>')
+          text=text.replace("""function openLinkActions(id){
+            actionId=String(id);
+            const l=findLink(id);if(!l)return;
+            openOverlayHtml(`<h2>${esc(l.title)}</h2><div class="actionmenu"><button onclick="actionEdit()">✏️ שינוי</button></div>`);
+          }
+          ""","""function openLinkActions(id){
+            actionId=String(id);
+            openEdit(id,false);
+          }
+          """)
+          text=text.replace("""function openNewLink(){
+            editId=null;editType='website';
+            openOverlayHtml(`<h2>הוספת קיצור דרך</h2>
+              <div class="segment"><button id="webBtn" class="on" onclick="setType('website')">אתר</button><button id="appBtn" onclick="setType('app')">אפליקציה</button></div>
+              <input id="editTitle" class="field" placeholder="שם הקישור">
+              <div class="urlrow"><input id="editUrl" class="field" dir="ltr" placeholder="https://..."><button class="paste" onclick="pasteUrl()">הדבק URL</button></div>
+              <button class="save" onclick="saveNewLinkFromForm()">שמור</button><button class="close" onclick="closeOverlay()">ביטול</button>`);
+          }
+          ""","""function openNewLink(){
+            editId=null;editType='website';
+            openOverlayHtml(`<h2>הוספת קיצור דרך</h2>
+              <div class="form-stack">
+                <div class="segment"><button id="webBtn" class="on" onclick="setType('website')">אתר</button><button id="appBtn" onclick="setType('app')">אפליקציה</button></div>
+                <input id="editTitle" class="field" placeholder="שם הקישור" autofocus>
+                <div class="urlrow"><input id="editUrl" class="field" dir="ltr" placeholder="https://..."><button class="paste" onclick="pasteUrl()">הדבק URL</button></div>
+              </div>
+              <div class="sticky-actions"><button class="save" onclick="saveNewLinkFromForm()">שמור</button><button class="close" onclick="closeOverlay()">ביטול</button></div>`,{view:'overlay'},'#overlay',true);
+          }
+          """)
+          text=text.replace("""function openEdit(id,replaceCurrent){
+            const l=findLink(id);if(!l)return;editId=String(id);editType=l.shortcutType||'website';
+            const x=`<h2>עריכת קיצור דרך</h2>
+              <div class="segment"><button id="webBtn" class="${editType==='website'?'on':''}" onclick="setType('website')">אתר</button><button id="appBtn" class="${editType==='app'?'on':''}" onclick="setType('app')">אפליקציה</button></div>
+              <input id="editTitle" class="field" value="${esc(l.title)}" placeholder="שם הקישור">
+              <div class="urlrow"><input id="editUrl" class="field" dir="ltr" value="${esc(l.url||'')}" placeholder="https://..."><button class="paste" onclick="pasteUrl()">הדבק URL</button></div>
+              <button class="save" onclick="saveEdit()">שמור</button>
+              <button class="close" onclick="closeOverlay()">ביטול</button>
+              <button class="close danger" onclick="deleteEditingLink()">מחיקת קיצור דרך</button>`;
+            replaceCurrent&&document.getElementById('ov')?replaceOverlayHtml(x):openOverlayHtml(x);
+          }
+          ""","""function openEdit(id,replaceCurrent){
+            const l=findLink(id);if(!l)return;editId=String(id);editType=l.shortcutType||'website';
+            const x=`<h2>עריכת קיצור דרך</h2>
+              <div class="form-stack">
+                <div class="segment"><button id="webBtn" class="${editType==='website'?'on':''}" onclick="setType('website')">אתר</button><button id="appBtn" class="${editType==='app'?'on':''}" onclick="setType('app')">אפליקציה</button></div>
+                <input id="editTitle" class="field" value="${esc(l.title)}" placeholder="שם הקישור" autofocus>
+                <div class="urlrow"><input id="editUrl" class="field" dir="ltr" value="${esc(l.url||'')}" placeholder="https://..."><button class="paste" onclick="pasteUrl()">הדבק URL</button></div>
+              </div>
+              <div class="sticky-actions">
+                <button class="save" onclick="saveEdit()">שמור</button>
+                <button class="close" onclick="closeOverlay()">ביטול</button>
+                <button class="close danger" onclick="deleteEditingLink()">מחיקת קיצור דרך</button>
+              </div>`;
+            replaceCurrent&&document.getElementById('ov')?replaceOverlayHtml(x,true):openOverlayHtml(x,{view:'overlay'},'#overlay',true);
+          }
+          """)
+          text=text.replace("""function openOverlayHtml(inner,state={view:'overlay'},hash='#overlay'){
+            removeOverlay();
+            const d=document.createElement('div');d.id='ov';d.className='overlay';
+            d.innerHTML='<div class="sheet">'+inner+'</div>';
+            d.onclick=e=>{if(e.target===d) closeOverlay();};
+            document.body.appendChild(d);
+            history.pushState(state,'',hash);
+          }
+          function replaceOverlayHtml(inner){
+            removeOverlay();
+            const d=document.createElement('div');d.id='ov';d.className='overlay';
+            d.innerHTML='<div class="sheet">'+inner+'</div>';
+            d.onclick=e=>{if(e.target===d) closeOverlay();};
+            document.body.appendChild(d);
+          }
+          ""","""function wireOverlayFocus(){
+            const sheet=document.querySelector('#ov .sheet');
+            if(!sheet)return;
+            const inputs=sheet.querySelectorAll('input, textarea');
+            inputs.forEach(el=>el.addEventListener('focus',()=>{
+              setTimeout(()=>{try{el.scrollIntoView({block:'center',behavior:'smooth'});}catch(e){}},220);
+            }));
+            const first=sheet.querySelector('input[autofocus], textarea[autofocus]');
+            if(first){setTimeout(()=>{try{first.focus({preventScroll:true});}catch(e){first.focus();}},80);}
+          }
+          function openOverlayHtml(inner,state={view:'overlay'},hash='#overlay',isForm=false){
+            removeOverlay();
+            const d=document.createElement('div');d.id='ov';d.className='overlay';
+            d.innerHTML='<div class="sheet'+(isForm?' form-sheet':'')+'">'+inner+'</div>';
+            d.onclick=e=>{if(e.target===d) closeOverlay();};
+            document.body.appendChild(d);
+            wireOverlayFocus();
+            history.pushState(state,'',hash);
+          }
+          function replaceOverlayHtml(inner,isForm=false){
+            removeOverlay();
+            const d=document.createElement('div');d.id='ov';d.className='overlay';
+            d.innerHTML='<div class="sheet'+(isForm?' form-sheet':'')+'">'+inner+'</div>';
+            d.onclick=e=>{if(e.target===d) closeOverlay();};
+            document.body.appendChild(d);
+            wireOverlayFocus();
+          }
+          """)
+          p.write_text(text,encoding='utf-8')
+
+          g=Path('manyot-build/manyot_android_v1/app/build.gradle')
+          gs=g.read_text(encoding='utf-8').replace('versionCode 1','versionCode 2').replace("versionName '1.0'","versionName '2.0'")
+          g.write_text(gs,encoding='utf-8')
+          PY
+
       - name: Build debug APK
         run: gradle -p manyot-build/manyot_android_v1 assembleDebug
 
       - name: Prepare APK
-        run: cp manyot-build/manyot_android_v1/app/build/outputs/apk/debug/app-debug.apk manyot-v1.apk
+        run: cp manyot-build/manyot_android_v1/app/build/outputs/apk/debug/app-debug.apk manyot-v2.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: manyot-v1-apk
-          path: manyot-v1.apk
+          name: manyot-v2-apk
+          path: manyot-v2.apk
           if-no-files-found: error
