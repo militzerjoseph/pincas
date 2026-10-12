@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'manyot-android-v1-source.zip'
+      - 'manyot-android-parts/**'
       - '.github/workflows/build-manyot-apk.yml'
 
 jobs:
@@ -34,6 +34,19 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+
+      - name: Rebuild project archive
+        run: |
+          cat manyot-android-parts/part00 \
+              manyot-android-parts/part01 \
+              manyot-android-parts/part02 \
+              manyot-android-parts/part03 \
+              manyot-android-parts/part04 \
+              manyot-android-parts/part05 \
+              manyot-android-parts/part06 \
+              manyot-android-parts/part07 \
+              manyot-android-parts/part08 > manyot-android-v1-source.zip
+          unzip -t manyot-android-v1-source.zip
 
       - name: Unpack project
         run: |
