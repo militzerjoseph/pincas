@@ -146,3 +146,20 @@ jobs:
           name: btl-v2-unsigned-apk
           path: BTL_V2_unsigned.apk
           if-no-files-found: error
+
+      - name: Prepare signer tools
+        shell: bash
+        run: |
+          BT="$ANDROID_HOME/build-tools/35.0.0"
+          mkdir -p signer-tools/lib
+          cp "$BT/apksigner" signer-tools/
+          cp "$BT/zipalign" signer-tools/
+          cp "$BT/lib/apksigner.jar" signer-tools/lib/
+          chmod +x signer-tools/apksigner signer-tools/zipalign
+
+      - name: Upload signer tools
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-signer-tools-35
+          path: signer-tools
+          if-no-files-found: error
