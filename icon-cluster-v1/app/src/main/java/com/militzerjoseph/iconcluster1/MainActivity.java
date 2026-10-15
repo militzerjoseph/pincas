@@ -1,18 +1,24 @@
 package com.militzerjoseph.iconcluster1;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.ClipData;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.os.Bundle;
+import android.view.DragEvent;
+import android.view.GestureDetector;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.view.WindowInsets;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.FrameLayout;
@@ -73,8 +79,10 @@ public class MainActivity extends Activity {
 
         FrameLayout header = new FrameLayout(this);
         header.setBackgroundColor(Color.rgb(20, 20, 20));
-        root.addView(header, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(64)));
+        LinearLayout.LayoutParams headerParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(64));
+        root.addView(header, headerParams);
+        applyHeaderInsets(header);
 
         TextView title = new TextView(this);
         title.setText("מקבץ איקונים 1");
@@ -96,7 +104,8 @@ public class MainActivity extends Activity {
         plus.setAllCaps(false);
         plus.setContentDescription("הוסף אפליקציות");
         plus.setOnClickListener(v -> showAppPicker());
-        FrameLayout.LayoutParams plusParams = new FrameLayout.LayoutParams(dp(64), dp(64), Gravity.LEFT | Gravity.CENTER_VERTICAL);
+        FrameLayout.LayoutParams plusParams = new FrameLayout.LayoutParams(
+                dp(64), dp(64), Gravity.LEFT | Gravity.BOTTOM);
         header.addView(plus, plusParams);
 
         ScrollView scroll = new ScrollView(this);
@@ -123,12 +132,33 @@ public class MainActivity extends Activity {
         grid.setColumnCount(4);
         grid.setAlignmentMode(GridLayout.ALIGN_BOUNDS);
         grid.setUseDefaultMargins(false);
+        grid.setOnDragListener(this::handleGridDrag);
         content.addView(grid, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
 
         setContentView(root);
         renderGrid();
+    }
+
+    private void applyHeaderInsets(FrameLayout header) {
+        header.setOnApplyWindowInsetsListener((v, insets) -> {
+            int topInset;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                topInset = insets.getInsets(WindowInsets.Type.statusBars()).top;
+            } else {
+                topInset = insets.getSystemWindowInsetTop();
+            }
+
+            v.setPadding(0, topInset, 0, 0);
+            ViewGroup.LayoutParams lp = v.getLayoutParams();
+            if (lp != null) {
+                lp.height = dp(64) + topInset;
+                v.setLayoutParams(lp);
+            }
+            return insets;
+        });
+        header.requestApplyInsets();
     }
 
     private void renderGrid() {
@@ -154,6 +184,7 @@ public class MainActivity extends Activity {
         cell.setOrientation(LinearLayout.VERTICAL);
         cell.setGravity(Gravity.CENTER);
         cell.setPadding(dp(3), dp(6), dp(3), dp(4));
+        cell.setTag(pkg);
 
         ImageView icon = new ImageView(this);
         icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
@@ -178,8 +209,144 @@ public class MainActivity extends Activity {
             icon.setImageResource(android.R.drawable.sym_def_app_icon);
         }
 
-        cell.setOnClickListener(v -> launchPackage(pkg));
+        installCellGestures(cell, pkg);
         return cell;
+    }
+
+    private void installCellGestures(View cell, String pkg) {
+        final boolean[] dragStarted = {false};
+
+        GestureDetector detector = new GestureDetector(this,
+                new GestureDetector.SimpleOnGestureListener() {
+                    @Override
+                    public boolean onDown(MotionEvent e) {
+                        dragStarted[0] = false;
+                        return true;
+                    }
+
+                    @Override
+                    public boolean onSingleTapUp(MotionEvent e) {
+                        if (!dragStarted[0]) launchPackage(pkg);
+                        return true;
+                    }
+
+                    @Override
+                    public void onLongPress(MotionEvent e) {
+                        if (!dragStarted[0]) showRemoveDialog(pkg);
+                    }
+
+                    @Override
+                    public boolean onScroll(MotionEvent e1, MotionEvent e2,
+                                            float distanceX, float distanceY) {
+                        if (!dragStarted[0] && e1 != null && e2 != null) {
+                            float dx = e2.getX() - e1.getX();
+                            float dy = e2.getY() - e1.getY();
+                            if ((dx * dx) + (dy * dy) > dp(10) * dp(10)) {
+                                dragStarted[0] = true;
+                                ClipData data = ClipData.newPlainText("package", pkg);
+                                View.DragShadowBuilder shadow = new View.DragShadowBuilder(cell);
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                    cell.startDragAndDrop(data, shadow, pkg, 0);
+                                } else {
+                                    cell.startDrag(data, shadow, pkg, 0);
+                                }
+                                cell.setAlpha(0.35f);
+                            }
+                        }
+                        return true;
+                    }
+                });
+
+        cell.setOnTouchListener((v, event) -> {
+            detector.onTouchEvent(event);
+            if (event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
+                v.setAlpha(1f);
+            }
+            return true;
+        });
+    }
+
+    private boolean handleGridDrag(View v, DragEvent event) {
+        switch (event.getAction()) {
+            case DragEvent.ACTION_DRAG_STARTED:
+                return event.getLocalState() instanceof String;
+
+            case DragEvent.ACTION_DROP:
+                Object local = event.getLocalState();
+                if (!(local instanceof String)) return false;
+                movePackageTo((String) local, event.getX(), event.getY());
+                return true;
+
+            case DragEvent.ACTION_DRAG_ENDED:
+                for (int i = 0; i < grid.getChildCount(); i++) {
+                    grid.getChildAt(i).setAlpha(1f);
+                }
+                return true;
+
+            default:
+                return true;
+        }
+    }
+
+    private void movePackageTo(String pkg, float x, float y) {
+        int from = selectedPackages.indexOf(pkg);
+        if (from < 0 || selectedPackages.size() < 2) return;
+
+        int target = findNearestCellIndex(x, y);
+        if (target < 0) target = selectedPackages.size() - 1;
+        if (target == from) {
+            renderGrid();
+            return;
+        }
+
+        String moving = selectedPackages.remove(from);
+        if (from < target) target--;
+        if (target < 0) target = 0;
+        if (target > selectedPackages.size()) target = selectedPackages.size();
+        selectedPackages.add(target, moving);
+        saveSelectedApps();
+        renderGrid();
+    }
+
+    private int findNearestCellIndex(float x, float y) {
+        int count = grid.getChildCount();
+        if (count == 0) return -1;
+
+        int nearest = 0;
+        double best = Double.MAX_VALUE;
+        for (int i = 0; i < count; i++) {
+            View child = grid.getChildAt(i);
+            float cx = child.getLeft() + child.getWidth() / 2f;
+            float cy = child.getTop() + child.getHeight() / 2f;
+            double dx = x - cx;
+            double dy = y - cy;
+            double distance = dx * dx + dy * dy;
+            if (distance < best) {
+                best = distance;
+                nearest = i;
+            }
+        }
+        return nearest;
+    }
+
+    private void showRemoveDialog(String pkg) {
+        String label = pkg;
+        try {
+            ApplicationInfo info = getPackageManager().getApplicationInfo(pkg, 0);
+            label = String.valueOf(getPackageManager().getApplicationLabel(info));
+        } catch (Exception ignored) {
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(label)
+                .setMessage("להסיר את האייקון מהמקבץ?")
+                .setPositiveButton("הסר מהמקבץ", (dialog, which) -> {
+                    selectedPackages.remove(pkg);
+                    saveSelectedApps();
+                    renderGrid();
+                })
+                .setNegativeButton("ביטול", null)
+                .show();
     }
 
     private void launchPackage(String pkg) {
