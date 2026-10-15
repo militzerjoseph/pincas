@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.ResolveInfo;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
@@ -72,13 +73,13 @@ public class MainActivity extends Activity {
     private void buildMainScreen() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.rgb(246, 247, 249));
+        root.setBackgroundColor(Color.rgb(245, 245, 245));
         root.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT));
 
         FrameLayout header = new FrameLayout(this);
-        header.setBackgroundColor(Color.rgb(20, 20, 20));
+        header.setBackgroundColor(Color.rgb(17, 17, 17));
         LinearLayout.LayoutParams headerParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(64));
         root.addView(header, headerParams);
@@ -87,19 +88,20 @@ public class MainActivity extends Activity {
         TextView title = new TextView(this);
         title.setText("מקבץ איקונים 1");
         title.setTextColor(Color.WHITE);
-        title.setTextSize(21);
-        title.setGravity(Gravity.CENTER);
+        title.setTextSize(17);
+        title.setTypeface(null, Typeface.NORMAL);
+        title.setGravity(Gravity.CENTER_VERTICAL | Gravity.RIGHT);
         FrameLayout.LayoutParams titleParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT);
-        titleParams.leftMargin = dp(64);
-        titleParams.rightMargin = dp(64);
+        titleParams.leftMargin = dp(70);
+        titleParams.rightMargin = dp(20);
         header.addView(title, titleParams);
 
         Button plus = new Button(this);
         plus.setText("+");
-        plus.setTextSize(31);
-        plus.setTextColor(Color.WHITE);
+        plus.setTextSize(27);
+        plus.setTextColor(Color.rgb(255, 216, 110));
         plus.setBackgroundColor(Color.TRANSPARENT);
         plus.setAllCaps(false);
         plus.setContentDescription("הוסף אפליקציות");
@@ -377,10 +379,12 @@ public class MainActivity extends Activity {
 
         TextView pickerTitle = new TextView(this);
         pickerTitle.setText("בחר אפליקציות");
-        pickerTitle.setTextSize(21);
+        pickerTitle.setTextSize(17);
         pickerTitle.setTextColor(Color.WHITE);
-        pickerTitle.setGravity(Gravity.CENTER);
-        pickerTitle.setBackgroundColor(Color.rgb(20, 20, 20));
+        pickerTitle.setTypeface(null, Typeface.NORMAL);
+        pickerTitle.setGravity(Gravity.CENTER_VERTICAL | Gravity.RIGHT);
+        pickerTitle.setPadding(dp(20), 0, dp(20), 0);
+        pickerTitle.setBackgroundColor(Color.rgb(17, 17, 17));
         root.addView(pickerTitle, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(62)));
 
