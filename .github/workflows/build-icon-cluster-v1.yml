@@ -43,6 +43,9 @@ jobs:
       - name: Apply V2.1 screen background choices
         run: python icon-cluster-v1/apply-v2-1-screen-bg.py
 
+      - name: Apply V2.2 move mode
+        run: python icon-cluster-v1/apply-v2-2-move-mode.py
+
       - name: Build unsigned release APK
         run: gradle -p icon-cluster-v1 :app:assembleRelease
 
