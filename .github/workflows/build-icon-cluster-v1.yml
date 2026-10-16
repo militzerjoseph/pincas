@@ -46,6 +46,9 @@ jobs:
       - name: Apply V2.2 move mode
         run: python icon-cluster-v1/apply-v2-2-move-mode.py
 
+      - name: Apply V2.3 backup and restore
+        run: python icon-cluster-v1/apply-v2-3-backup-restore.py
+
       - name: Build unsigned release APK
         run: gradle -p icon-cluster-v1 :app:assembleRelease
 
