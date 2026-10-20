@@ -8,6 +8,7 @@ root=Path(__file__).resolve().parent
 res=root/'app/src/main/res/drawable-nodpi'
 for encoded in root.rglob('*.webp.b64'):
     encoded.with_suffix('').write_bytes(base64.b64decode(encoded.read_text()))
+    encoded.unlink()
 html=(root/'app/src/main/assets/index.html').read_text()
 raw=re.search(r'let ICON_BACKGROUND_OPTIONS=(\[.*?\]);',html).group(1)
 bgs=json.loads(re.sub(r'(?<=[{,])(id|label|color):',r'"\1":',raw))
