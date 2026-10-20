@@ -1,0 +1,850 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111111">
+<title>ב.לאומי — גרסה 101</title>
+<style>
+.field{background:#fff!important;border:1px solid #b3bdc9!important}.version{font-weight:400!important}
+
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--ui-page-bg,#f5f5f5);color:#111;font-family:Arial,"Noto Sans Hebrew",sans-serif}
+body{-webkit-tap-highlight-color:transparent}
+button,input{font:inherit}
+button{cursor:pointer}
+.head{
+  background:var(--ui-header-bg,#111111);color:var(--ui-header-text,#ffffff);padding:42px 20px 20px;
+  display:flex;align-items:center;gap:16px;direction:rtl;
+  position:sticky;top:0;z-index:5
+}
+.head-title{flex:1;min-width:0;text-align:right}
+.head h1{margin:0;font-size:var(--ui-header-size,28px);font-weight:var(--ui-header-weight,700);line-height:1;text-align:right}
+.version{font-size:var(--ui-version-size,14px);font-weight:var(--ui-version-weight,400);color:var(--ui-header-text,#ffffff);opacity:.72;margin-top:6px}
+.icons{display:flex;align-items:center;gap:8px;direction:ltr}
+.icons button{border:0;background:transparent;color:#fff;padding:0;line-height:1}
+.addtop{font-size:27px;color:#ffd86e!important;display:flex;align-items:center;gap:2px;direction:ltr}
+.plus-left{font-size:26px;line-height:1}
+.symbol-right{font-size:25px;line-height:1}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:18px;direction:ltr}
+.folder{
+  touch-action:pan-y;-webkit-user-select:none;user-select:none;
+  border:0;border-radius:20px;min-height:125px;padding:22px 14px 14px;
+  box-shadow:0 3px 12px #0002;position:relative;text-align:right;overflow:hidden
+}
+.name{font-size:21px;font-weight:600;direction:rtl;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.count{position:absolute;left:14px;bottom:12px;font-size:20px;direction:ltr}
+.icon{position:absolute;right:14px;bottom:4px;font-size:32px;line-height:1}
+
+.tools{display:flex;justify-content:center;gap:10px;padding:4px 18px 24px}
+.toolbtn{border:0;border-radius:14px;background:var(--ui-card-bg,#ffffff);padding:11px 18px;font-size:var(--ui-tool-size,17px);font-weight:var(--ui-tool-weight,400);box-shadow:0 2px 8px #0001}
+.backup-date{text-align:center;color:#777;font-size:14px;padding:0 15px 16px}
+
+.links{padding:12px 18px 42px}
+.link{
+  background:var(--ui-card-bg,#ffffff);touch-action:pan-y;-webkit-user-select:none;user-select:none;
+  border-radius:14px;padding:13px;margin:9px 0;display:grid;
+  grid-template-columns:50px 1fr;gap:12px;direction:ltr;
+  box-shadow:0 2px 8px #0001;cursor:pointer
+}
+.li{font-size:26px;display:grid;place-items:center}
+.link-globe{width:30px;height:30px;display:block}
+.link-globe.website{color:#1976d2}
+.link-globe.app{color:#f28c28}
+.link-globe circle,.link-globe path{stroke:currentColor;fill:none;stroke-width:2}
+.missing-mark{font-size:26px;line-height:1}
+.lt{direction:rtl;text-align:right;min-width:0}
+.lt b{font-size:var(--ui-shortcut-size,20px);font-weight:var(--ui-shortcut-weight,600);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lt small{display:block;margin-top:5px;color:#555;font-size:var(--ui-url-size,13px);font-weight:var(--ui-url-weight,400);direction:ltr;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.missing{color:#999!important;direction:rtl!important;text-align:right!important}
+.empty{padding:50px 20px;text-align:center;color:#777;font-size:19px}
+
+.overlay{position:fixed;inset:0;background:#0007;z-index:30;display:flex;align-items:flex-end;z-index:30}
+.sheet{width:100%;background:#fff;border-radius:24px 24px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:82dvh;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.sheet h2{margin:2px 0 12px;font-size:24px;line-height:1.12}
+.form-stack{display:grid;gap:8px}
+.sticky-actions{position:sticky;bottom:calc(-16px - env(safe-area-inset-bottom,0px));background:#fff;padding-top:10px;padding-bottom:calc(6px + env(safe-area-inset-bottom,0px));margin-top:8px}
+.field{width:100%;padding:12px;border:2px solid #777;border-radius:14px;font-size:18px;margin:0}
+.segment{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
+.segment button{border:0;border-radius:12px;padding:11px;background:#ddd;font-size:18px}
+.segment button.on{background:#111;color:#fff}
+.urlrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;direction:ltr;align-items:stretch}
+.paste{border:0;border-radius:14px;background:#111;color:#fff;padding:0 12px;font-weight:700;min-width:122px;white-space:nowrap;text-align:center;line-height:1.03}
+.app-picker{border:1px solid #ddd;border-radius:14px;background:#fafafa;padding:10px}
+.app-picker.hidden{display:none}
+.app-picker button{width:100%;border:0;border-radius:12px;background:#222;color:#fff;padding:12px 14px;font-size:18px;font-weight:700}
+.app-picker small{display:block;color:#666;margin-top:7px;font-size:13px;line-height:1.35;text-align:right}
+.app-picked{margin-top:7px;font-size:14px;color:#333;word-break:break-all}
+
+.app-picker-search{width:100%;padding:12px 13px;border:2px solid #777;border-radius:14px;font-size:18px;margin:2px 0 10px}
+.app-picker-count{font-size:15px;color:#555;margin:4px 2px 8px}
+.app-picker-list{display:grid;gap:7px;max-height:48dvh;overflow:auto;padding:2px 0 8px}
+.app-row{display:grid;grid-template-columns:44px 1fr 34px;gap:10px;align-items:center;border:1px solid #ddd;background:#fafafa;border-radius:13px;padding:8px 10px;text-align:right}
+.app-row.on{background:#eef6ff;border-color:#5d8ed5}
+.app-row img{width:38px;height:38px;border-radius:9px;object-fit:contain}
+.app-row .fallback{font-size:29px;text-align:center}
+.app-row-name{font-size:17px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app-row-pkg{font-size:11px;color:#777;direction:ltr;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app-row-check{font-size:22px;text-align:center}
+.app-shortcut-icon{width:34px;height:34px;border-radius:8px;object-fit:contain;display:block}
+
+.save{width:100%;border:0;border-radius:14px;background:#111;color:#fff;padding:14px;font-size:20px;font-weight:700;margin-top:0}
+.close{width:100%;border:0;border-radius:14px;background:#eee;padding:13px;font-size:18px;margin-top:8px}
+.danger{background:#ffe4e8!important;color:#c7001c!important;font-weight:700}
+.actionmenu{display:grid;gap:8px}
+.actionmenu button{border:0;background:#f1f1f1;padding:14px 16px;font-size:19px;text-align:right;border-radius:14px}
+
+.colors{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:8px 0 14px}
+.colorpick{aspect-ratio:1;border-radius:11px;border:3px solid transparent}
+.colorpick.on{border-color:#111}
+.iconpicks{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 14px}
+.iconpick{width:48px;height:48px;border:2px solid #ddd;background:#fff;border-radius:12px;font-size:25px}
+.iconpick.on{border-color:#111;background:#eee}
+
+.toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:#111;color:#fff;padding:11px 16px;border-radius:12px;opacity:0;pointer-events:none;z-index:50;transition:.2s;white-space:nowrap}
+.toast.show{opacity:1}
+
+@media(max-width:390px){
+  .grid{gap:12px;padding:12px}
+  .folder{min-height:118px;padding-top:20px}
+  .name{font-size:21px}
+  .icon{bottom:3px}
+  .sheet{max-height:78dvh;padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px))}
+  .sheet h2{font-size:21px}
+  .field{font-size:17px;padding:11px}
+  .segment button,.close,.save,.paste,.actionmenu button{font-size:17px}
+  .paste{min-width:114px}
+}
+
+
+
+/* ===== הגדרות מתקדמות ===== */
+.settings-section{border-top:1px solid #ddd;padding-top:14px;margin-top:14px}
+.settings-section:first-of-type{border-top:0;padding-top:0;margin-top:0}
+.settings-section h3{font-size:21px;margin:8px 0 12px}
+.setting-nav-row{width:100%;border:0;background:#f3f3f3;border-radius:13px;padding:13px 14px;margin:7px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:18px;text-align:right}
+.setting-nav-arrow{font-size:24px;color:#666;line-height:1}
+.info-grid{display:grid;grid-template-columns:1fr auto;gap:9px 14px;font-size:17px;padding:4px 0}
+.manual-list{margin:8px 0 0;padding-inline-start:24px}
+.manual-list li{margin:12px 0;line-height:1.45}
+.manual-list b{display:block;margin-bottom:3px}
+.central-type-list{border:1px solid #ddd;border-radius:16px;overflow:hidden;background:#fff}
+.central-type-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:13px 12px}
+.central-type-row+.central-type-row{border-top:1px solid #eee}
+.central-type-label b{display:block;font-size:16px;font-weight:600;margin-bottom:3px}
+.central-type-label small{display:block;color:#777;font-size:12px;line-height:1.3}
+.central-stepper{display:flex;align-items:center;gap:5px;direction:ltr}
+.central-stepper button{width:38px;height:36px;border:0;border-radius:10px;background:#eee;font-size:22px;line-height:1}
+.central-stepper .value{min-width:44px;height:36px;padding:0 8px;border:1px solid #ddd;border-radius:10px;background:#fafafa;display:grid;place-items:center;font-size:16px;font-weight:400}
+.weight-cycle{min-width:68px!important;width:auto!important;padding:0 9px!important;font-size:15px!important;display:flex;align-items:center;justify-content:center;gap:5px}
+.weight-cycle .bmark{font-size:17px;line-height:1}
+.typography-help{font-size:13px;color:#666;line-height:1.5;margin:10px 2px 2px}
+.color-targets{border:1px solid #ddd;border-radius:16px;overflow:hidden;background:#fff}
+.color-target-row{width:100%;border:0;background:#fff;padding:12px;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;text-align:right}
+.color-target-row+.color-target-row{border-top:1px solid #eee}
+.color-target-row .radio{width:24px;height:24px;border:2px solid #777;border-radius:50%;display:grid;place-items:center}
+.color-target-row.on .radio::after{content:"";width:12px;height:12px;border-radius:50%;background:#111}
+.current-swatch{width:34px;height:34px;border-radius:50%;border:2px solid #bbb;box-shadow:0 0 0 1px #fff inset}
+.color-label b{display:block;font-size:16px;font-weight:600}
+.color-label small{display:block;font-size:12px;color:#777;margin-top:2px;direction:ltr;text-align:right}
+.color-palette{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin:12px 0 10px}
+.color-swatch{aspect-ratio:1;border-radius:50%;border:2px solid #bbb;min-width:0;box-shadow:0 0 0 1px #fff inset}
+.color-swatch.on{outline:3px solid #111;outline-offset:2px}
+.color-preview{border-radius:14px;padding:13px 15px;margin-top:10px;min-height:72px;display:flex;flex-direction:column;justify-content:center}
+.color-preview .preview-title{font-size:var(--ui-header-size,28px);font-weight:var(--ui-header-weight,700);line-height:1}
+.color-preview .preview-version{font-size:var(--ui-version-size,14px);font-weight:var(--ui-version-weight,400);opacity:.72;margin-top:6px}
+.color-presets{margin:12px 0 14px}
+.color-presets-title{font-size:16px;font-weight:600;margin:0 0 8px}
+.color-presets-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.color-preset-btn{border:1px solid #d7d7d7;border-radius:12px;background:#fff;padding:9px 10px;display:grid;grid-template-columns:auto 1fr;gap:9px;align-items:center;text-align:right}
+.color-preset-btn.on{outline:2px solid #111;outline-offset:1px}
+.color-preset-pair{display:flex;align-items:center;gap:4px;direction:ltr}
+.color-preset-dot{width:22px;height:22px;border-radius:50%;border:1px solid #bbb}
+.color-preset-name{font-size:14px;font-weight:500}
+.setting-toggle-row{width:100%;border:0;background:#f3f3f3;border-radius:13px;padding:13px 14px;margin:7px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:18px;text-align:right}
+.switch{width:48px;height:28px;border-radius:14px;background:#bbb;position:relative;flex:0 0 auto;direction:ltr}
+.switch::after{content:"";position:absolute;top:4px;left:4px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.15s}
+.switch.on{background:#111}
+.switch.on::after{left:24px}
+.reset-design{width:100%;border:0;border-radius:14px;background:#fff3d7;color:#6b4c00;padding:13px;font-size:18px;font-weight:700;margin-top:10px}
+
+/* התאמות לתוכנית העצמאית */
+.links{padding-bottom:18px}
+.tools{padding-top:0}
+
+/* ===== התאמת אייקון האפליקציה ===== */
+.icon-settings-preview-wrap{display:flex;justify-content:center;margin:12px 0 18px}
+.icon-settings-preview{width:126px;height:126px;border-radius:27px;position:relative;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.18);display:flex;align-items:flex-end;justify-content:center;padding-bottom:28px;color:#fff}
+.icon-settings-preview.grid{background-image:linear-gradient(rgba(255,255,255,.58) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.58) 1px,transparent 1px);background-size:25px 25px}
+.icon-settings-preview.light{background-color:#b5bbc3}.icon-settings-preview.medium{background-color:#949aa3}.icon-settings-preview.dark{background-color:#6f7680}.icon-settings-preview.sky{background-color:#a9d4e8}
+.icon-preview-text{font-weight:700;text-shadow:0 2px 3px rgba(0,0,0,.25);direction:rtl;white-space:nowrap}
+.icon-preview-text.small{font-size:30px}.icon-preview-text.normal{font-size:37px}.icon-preview-text.large{font-size:44px}
+.icon-choice-group{margin:15px 0}.icon-choice-title{font-size:17px;font-weight:650;margin-bottom:8px}
+.icon-choice-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.icon-choice-row.two{grid-template-columns:repeat(2,1fr)}
+.icon-choice{border:1px solid #c9c9c9;border-radius:13px;background:#f7f7f7;padding:11px 6px;font-size:16px}
+.icon-choice.on{border:2px solid #526b8d;background:#eef4fb;font-weight:650}
+.icon-note{font-size:14px;color:#555;line-height:1.5;margin:12px 0}
+
+</style>
+</head>
+<body>
+<div id="app"></div>
+<input id="restoreInput" type="file" accept=".json,application/json" style="display:none">
+<div id="toast" class="toast"></div>
+
+<script>
+const APP_VERSION='101';
+const APP_NAME="ב.לאומי";
+const STOCKS_ID='f_btl';
+const STORAGE_KEY='BTL_UNIFORM_V1';
+const SEED={"folders":[{"id":"f_btl","name":"ב.לאומי","color":"#74c4ec","icon":"📁","createdAt":1}],"links":[{"id":"seed_031","folderId":"f_btl","title":"7.05-ביטוח לאומי - התנדבות","url":"https://yairron.com/btl/","shortcutType":"website","tag":"","createdAt":31,"updatedAt":31},{"id":"seed_032","folderId":"f_btl","title":"7.0-המדריך לאזרח 2026","url":"https://script.google.com/macros/s/AKfycbx4ez8UpCLN8JDdi7mY7W_bup7c5XTM0SQONnQUeg63Iph7boPwGH_x49yfr2PCgiZhfA/exec","shortcutType":"website","tag":"","createdAt":32,"updatedAt":1791661254194},{"id":"seed_033","folderId":"f_btl","title":"7.4-אזרח ותיק *8840","url":"https://www.google.com/search?q=%D7%90%D7%96%D7%A8%D7%97+%D7%95%D7%AA%D7%99%D7%A7+*8840&oq=%D7%90%D7%96%D7%A8%D7%97+%D7%95%D7%AA%D7%99%D7%A7+*8840&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIHCAEQIRigATIHCAIQIRigAdIBCjEwODA3ajBqMjmoAgCwAgE&client=ms-android-samsung-ss&sourceid=chrome-mobile&ie=UTF-8","shortcutType":"website","tag":"","createdAt":33,"updatedAt":1789713994889},{"id":"seed_036","folderId":"f_btl","title":"7.1-דף הבית ביטוח לאומי","url":"https://www.btl.gov.il/Pages/default.aspx?gclid=Cj0KCQjw8O-VBhCpARIsACMvVLOrBHoiC9RbpLpi1_lIRP-O2ilM4AMvvsbWBHhNKVnWkjTclXjbrNkaAvxkEALw_wcB","shortcutType":"website","tag":"","createdAt":36,"updatedAt":1790011285389},{"id":"seed_037","folderId":"f_btl","title":"7.5-מנוע זכויות הלאומי","url":"https://www.gov.il/he/service/national-rights-engine-service","shortcutType":"website","tag":"","createdAt":37,"updatedAt":37},{"id":"l_1790575131677_841xta","folderId":"f_btl","title":"7.3-אזרח ותיק","url":"","shortcutType":"app","packageName":"com.azeah_vatik","appIcon":"data:image/png;base64,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","tag":"","createdAt":1790575131677,"updatedAt":1790614842534},{"id":"l_1790624135100_7xkcwo","folderId":"f_btl","title":"7.2-כל זכות","url":"","shortcutType":"app","packageName":"il.org.kolzchut.app2","appIcon":"data:image/png;base64,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","tag":"","createdAt":1790624135100,"updatedAt":1790624166051}]};
+
+
+const UI_TYPO_DEFAULT={
+  headerSize:28,versionSize:13,shortcutSize:20,urlSize:13,toolSize:17,
+  headerWeight:400,versionWeight:400,shortcutWeight:600,urlWeight:400,toolWeight:400
+};
+const UI_COLOR_DEFAULT={headerBg:'#111111',headerText:'#ffffff',pageBg:'#f5f5f5',cardBg:'#ffffff'};
+const UI_PREFS_DEFAULT={showUrl:true};
+const FONT_WEIGHTS=[400,500,600,700];
+const COLOR_PALETTE=[
+  '#111111','#ffffff','#f9fafb','#f1f3f5','#e5e7eb','#c4c7cc','#9ca3af','#6b7280','#4b5563','#374151','#1f2937',
+  '#f3ecd9','#fbf7ec','#f6efdd','#ddd2b7','#d6c6a8','#74644d','#665846','#5c3d12','#4f3b18','#172033','#697386',
+  '#ffd86e','#d2d580','#ffd04b','#f4a3e7','#4f72f6','#8ee6ea','#74c4ec','#c9b0f4','#ff9966','#835fc8','#e83d64','#8da34f',
+  '#fff3b0','#ffd6a5','#ffc6c6','#d7f8c4','#c9f1ff','#d9d2ff','#f5d0ff','#12805c','#d92d20'
+];
+const COLOR_PRESETS=[
+  {id:'base',name:'BASE LINE',headerBg:'#111111',headerText:'#ffffff',pageBg:'#f5f5f5',cardBg:'#ffffff'},
+  {id:'color1',name:'COLOR 1 – אפור כהה',headerBg:'#374151',headerText:'#ffffff',pageBg:'#f1f3f5',cardBg:'#ffffff'},
+  {id:'color2',name:'COLOR 2 – קרם וחום',headerBg:'#f3ecd9',headerText:'#5c3d12',pageBg:'#fbf7ec',cardBg:'#ffffff'},
+  {id:'color3',name:'COLOR 3 – שמנת וכחול־אפור',headerBg:'#fbf7ec',headerText:'#172033',pageBg:'#f5f5f5',cardBg:'#ffffff'},
+  {id:'color4',name:'COLOR 4 – חום וקרם',headerBg:'#5c3d12',headerText:'#f6efdd',pageBg:'#fbf7ec',cardBg:'#ffffff'}
+];
+
+let DATA={folders:[],links:[],lastBackup:'',uiTypography:{...UI_TYPO_DEFAULT},uiColors:{...UI_COLOR_DEFAULT},uiPrefs:{...UI_PREFS_DEFAULT}};
+let currentFolder=STOCKS_ID;
+let editId=null;
+let editType='website';
+let lpTimer=null, lpId=null, lpX=0, lpY=0, suppressClickUntil=0;
+let actionId=null;
+
+function esc(v){
+  return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function jsq(v){return String(v==null?'':v).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+function numPrefix(text){const m=String(text||'').trim().match(/^(\d+(?:\.\d+)?)/);return m?parseFloat(m[1]):Infinity;}
+function compareNumbered(a,b,key){
+  const av=String(a?.[key]||''), bv=String(b?.[key]||'');
+  const an=numPrefix(av), bn=numPrefix(bv);
+  if(an!==bn) return an-bn;
+  return av.localeCompare(bv,'he',{numeric:true,sensitivity:'base'});
+}
+function uid(prefix){return prefix+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);}
+function canonicalFolder(){return {id:STOCKS_ID,name:APP_NAME,color:'#FFD86E',icon:'😀',createdAt:1};}
+
+function normalizeFontWeight(v,fallback=400){
+  const n=Number(v);return FONT_WEIGHTS.includes(n)?n:fallback;
+}
+function nextFontWeight(v){
+  const i=FONT_WEIGHTS.indexOf(normalizeFontWeight(v,400));return FONT_WEIGHTS[(i+1)%FONT_WEIGHTS.length];
+}
+function normalizeHexColor(v,fallback){
+  const s=String(v||'').trim().toLowerCase();return /^#[0-9a-f]{6}$/.test(s)?s:fallback;
+}
+function normalizeUiTypography(v){
+  const d=UI_TYPO_DEFAULT;
+  const val=(key,min,max)=>{const n=Number(v?.[key]);return Number.isFinite(n)?Math.max(min,Math.min(max,Math.round(n))):d[key];};
+  return {
+    headerSize:val('headerSize',14,36),versionSize:val('versionSize',10,24),shortcutSize:val('shortcutSize',12,30),urlSize:val('urlSize',10,22),toolSize:val('toolSize',12,26),
+    headerWeight:normalizeFontWeight(v?.headerWeight,d.headerWeight),versionWeight:normalizeFontWeight(v?.versionWeight,d.versionWeight),shortcutWeight:normalizeFontWeight(v?.shortcutWeight,d.shortcutWeight),urlWeight:normalizeFontWeight(v?.urlWeight,d.urlWeight),toolWeight:normalizeFontWeight(v?.toolWeight,d.toolWeight)
+  };
+}
+function normalizeUiColors(v){
+  return {headerBg:normalizeHexColor(v?.headerBg,UI_COLOR_DEFAULT.headerBg),headerText:normalizeHexColor(v?.headerText,UI_COLOR_DEFAULT.headerText),pageBg:normalizeHexColor(v?.pageBg,UI_COLOR_DEFAULT.pageBg),cardBg:normalizeHexColor(v?.cardBg,UI_COLOR_DEFAULT.cardBg)};
+}
+function normalizeUiPrefs(v){return {showUrl:v?.showUrl!==false};}
+function uiTypography(){DATA.uiTypography=normalizeUiTypography(DATA.uiTypography);return DATA.uiTypography;}
+function uiColors(){DATA.uiColors=normalizeUiColors(DATA.uiColors);return DATA.uiColors;}
+function uiPrefs(){DATA.uiPrefs=normalizeUiPrefs(DATA.uiPrefs);return DATA.uiPrefs;}
+function applyUiSettings(){
+  const t=uiTypography(),c=uiColors();
+  const r=document.documentElement.style;
+  r.setProperty('--ui-header-size',t.headerSize+'px');r.setProperty('--ui-version-size',t.versionSize+'px');r.setProperty('--ui-shortcut-size',t.shortcutSize+'px');r.setProperty('--ui-url-size',t.urlSize+'px');r.setProperty('--ui-tool-size',t.toolSize+'px');
+  r.setProperty('--ui-header-weight',String(t.headerWeight));r.setProperty('--ui-version-weight',String(t.versionWeight));r.setProperty('--ui-shortcut-weight',String(t.shortcutWeight));r.setProperty('--ui-url-weight',String(t.urlWeight));r.setProperty('--ui-tool-weight',String(t.toolWeight));
+  r.setProperty('--ui-header-bg',c.headerBg);r.setProperty('--ui-header-text',c.headerText);r.setProperty('--ui-page-bg',c.pageBg);r.setProperty('--ui-card-bg',c.cardBg);
+  const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.setAttribute('content',c.headerBg);
+}
+function saveLocal(){localStorage.setItem(STORAGE_KEY,JSON.stringify(DATA));}
+function loadLocal(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const x=JSON.parse(raw);
+      if(Array.isArray(x.links)){
+        DATA={folders:[canonicalFolder()],links:x.links.map(l=>({...l,folderId:STOCKS_ID})),lastBackup:x.lastBackup||'',uiTypography:normalizeUiTypography(x.uiTypography),uiColors:normalizeUiColors(x.uiColors),uiPrefs:normalizeUiPrefs(x.uiPrefs)};
+        applyUiSettings();return;
+      }
+    }
+  }catch(e){}
+  DATA={folders:[canonicalFolder()],links:structuredClone(SEED.links),lastBackup:'',uiTypography:{...UI_TYPO_DEFAULT},uiColors:{...UI_COLOR_DEFAULT},uiPrefs:{...UI_PREFS_DEFAULT}};
+  applyUiSettings();saveLocal();
+}
+
+function toast(m){
+  const t=document.getElementById('toast');
+  t.textContent=m;t.classList.add('show');
+  clearTimeout(t.x);t.x=setTimeout(()=>t.classList.remove('show'),2200);
+}
+function sortedLinks(){return DATA.links.slice().sort((a,b)=>compareNumbered(a,b,'title'));}
+function findLink(id){return DATA.links.find(l=>String(l.id)===String(id))||null;}
+
+function appHeader(){
+  return `<div class="head">
+    <div class="head-title"><h1>${APP_NAME}</h1><div class="version">גרסה מס' ${APP_VERSION}</div></div>
+    <div class="icons">
+      <button class="addtop" onclick="openNewLink()" aria-label="הוסף קישור">
+        <span class="plus-left">+</span><span class="symbol-right">🔗</span>
+      </button>
+    </div>
+  </div>`;
+}
+
+function isAppShortcut(l){return !!(l && l.shortcutType === 'app');}
+function globeSvg(kind){
+  return '<svg class="link-globe '+kind+'" viewBox="0 0 32 32" aria-hidden="true">'+
+    '<circle cx="16" cy="16" r="12"></circle>'+ '<path d="M4 16h24"></path>'+ '<path d="M16 4c4 4 6 8 6 12s-2 8-6 12"></path>'+ '<path d="M16 4c-4 4-6 8-6 12s2 8 6 12"></path>'+ '</svg>';
+}
+function linkMarker(l){
+  if(l && l.shortcutType==='app'){
+    if(l.appIcon)return '<img class="app-shortcut-icon" src="'+esc(l.appIcon)+'" alt="">';
+    return '<span class="missing-mark">📱</span>';
+  }
+  if(!l || !l.url) return '<span class="missing-mark">✏️</span>';
+  return globeSvg('website');
+}
+
+function renderApp(){
+  currentFolder=STOCKS_ID;
+  const ls=sortedLinks();
+  let html=appHeader();
+  if(!ls.length) html+='<div class="empty">עדיין אין קישורים.</div>';
+  else{
+    html+='<main class="links">';
+    for(const l of ls){
+      html+=`<div class="link"
+        onclick="tapLink('${jsq(l.id)}')"
+        ontouchstart="lpStart(event,'${jsq(l.id)}')" ontouchmove="lpMove(event)"
+        ontouchend="lpEnd()" ontouchcancel="lpCancel()"
+        onmousedown="mouseLpStart(event,'${jsq(l.id)}')" onmouseup="mouseLpEnd()"
+        onmouseleave="mouseLpEnd()" oncontextmenu="return false">
+        <div class="li">${linkMarker(l)}</div>
+        <div class="lt"><b>${esc(l.title)}</b>
+        ${isAppShortcut(l)?('<small>'+esc(l.packageName||'אפליקציה')+'</small>'):(l.url?(uiPrefs().showUrl?'<small>'+esc(l.url)+'</small>':''):'<small class="missing">כתובת להשלמה</small>')}</div>
+      </div>`;
+    }
+    html+='</main>';
+  }
+  html+=`<div class="tools">
+    <button class="toolbtn" onclick="openBackupMenu()">💾 גיבוי</button>
+    <button class="toolbtn" onclick="chooseRestore()">שחזור</button>
+    <button class="toolbtn" onclick="openSettings()">הגדרות</button>
+  </div>
+  <div class="backup-date">${DATA.lastBackup?'גיבוי אחרון: '+esc(DATA.lastBackup):'עדיין לא נוצר גיבוי'}</div>`;
+  document.getElementById('app').innerHTML=html;
+}
+
+
+function settingsHtml(){
+  return `<h2>הגדרות</h2>
+    <div class="settings-section">
+      <h3>🎨 תצוגה ועיצוב</h3>
+      <button class="setting-nav-row" onclick="openTypographySettings()"><span>גודל ועובי כתב</span><span class="setting-nav-arrow">‹</span></button>
+      <button class="setting-nav-row" onclick="openColorSettings()"><span>צבעים</span><span class="setting-nav-arrow">‹</span></button>
+      <button class="setting-nav-row" onclick="openIconSettings()"><span>אייקון האפליקציה</span><span class="setting-nav-arrow">‹</span></button>
+      <button class="setting-toggle-row" onclick="toggleShowUrl()"><span>הצג כתובת URL מתחת לשם</span><span class="switch ${uiPrefs().showUrl?'on':''}"></span></button>
+      <button class="reset-design" onclick="resetDesignSettings()">איפוס העיצוב לברירת המחדל</button>
+    </div>
+    <div class="settings-section"><h3>ℹ️ פרטי התוכנית</h3>
+      <div class="info-grid">
+        <span>שם התוכנית</span><b>${APP_NAME}</b>
+        <span>גרסה</span><b>${APP_VERSION}</b>
+        <span>מספר קיצורים</span><b>${DATA.links.length}</b>
+        <span>שמירה</span><b>מקומית בטלפון</b>
+        <span>גיבוי אחרון</span><b>${esc(DATA.lastBackup||'עדיין לא נוצר גיבוי')}</b>
+      </div>
+    </div>
+    <div class="settings-section"><h3>📖 חוברת הפעלה</h3>
+      <ol class="manual-list">
+        <li><b>פתיחת קישור</b>לחיצה רגילה על קיצור דרך פותחת אותו.</li>
+        <li><b>הוספת קישור</b>לחץ על ‎+🔗‎ למעלה. עבור אתר הקלד שם וכתובת. עבור אפליקציה לחץ „בחר אפליקציה מהטלפון”, בחר מהרשימה ושמור.</li>
+        <li><b>עריכה ומחיקה</b>לחיצה ארוכה על קיצור דרך פותחת ישר את מסך השינוי. במסך העריכה ניתן גם למחוק.</li>
+        <li><b>גיבוי</b>בתפריט הגיבוי ניתן לגבות נתונים או APK, לבחור תיקיית ענן ולשחזר מקובץ. הנתונים נשמרים בטלפון ב־Download/גיבויים/ב.לאומי/נתונים, וה־APK בתיקיית APK. כפתור גיבוי שומר את הקישורים וגם את הגדרות העיצוב של התוכנית.</li>
+        <li><b>שחזור</b>אפשר לשחזר גיבוי של „ב.לאומי”, וגם גיבוי ישן של „תיקיות 1” שמכיל את תיקיית ב.לאומי.</li>
+        <li><b>גודל ועובי כתב</b>אפשר לשנות בנפרד את הכותרת, הגרסה, שמות הקיצורים, ה־URL והכפתורים התחתונים.</li>
+        <li><b>צבעים</b>אפשר לבחור שילוב מוכן או צבע נפרד לרקע העליון, לכיתוב העליון, לרקע המסך ולכרטיסי הקישורים.</li>
+        <li><b>אייקון האפליקציה</b>בהגדרות ניתן לבחור גוון רקע, עם או בלי קווי רשת, וגודל כיתוב. השינוי משפיע על האייקון במסך הבית.</li>
+      </ol>
+    </div>
+    <button class="close" onclick="closeOverlay()">סגור</button>`;
+}
+
+let ICON_BACKGROUND_OPTIONS=[{id:"style",label:"כחול HTML",color:"#016CEE"},{id:"light",label:"אפור בהיר",color:"#b5bbc3"},{id:"medium",label:"אפור בינוני",color:"#949aa3"},{id:"dark",label:"אפור כהה",color:"#6f7680"},{id:"black",label:"זהב",color:"#FFD86E"},{id:"white",label:"זית בהיר",color:"#D2D580"},{id:"charcoal",label:"צהוב",color:"#FFD04B"},{id:"navy",label:"ורוד",color:"#F4A3E7"},{id:"yellow",label:"כחול סגלגל",color:"#4F72F6"},{id:"grid",label:"אקווה",color:"#8EE6EA"},{id:"plain",label:"כחול בהיר",color:"#74C4EC"},{id:"large",label:"לבנדר",color:"#C9B0F4"},{id:"small",label:"כתום",color:"#FF9966"},{id:"normal",label:"סגול",color:"#835FC8"},{id:"background",label:"אדום",color:"#E83D64"},{id:"color",label:"ירוק",color:"#8DA34F"}];
+let launcherIconSettings={mode:'picture',background:'style',grid:false,textSize:'large',textColor:'white'};
+const ICON_DEFAULT={mode:'picture',background:'style',grid:false,textSize:'large',textColor:'white'};
+function iconBackgroundOption(id){return ICON_BACKGROUND_OPTIONS.find(x=>x.id===id)||ICON_BACKGROUND_OPTIONS.find(x=>x.id==='style');}
+const ICON_PENDING_KEY='GENERAL_COLOR_PENDING_ICON_V7';
+let launcherIconCommitStarted=false;
+function normalizeLauncherIconObject(obj){
+  const out={...ICON_DEFAULT};
+  if(obj && ['picture','text'].includes(obj.mode)) out.mode=obj.mode;
+  if(obj&&ICON_BACKGROUND_OPTIONS.some(x=>x.id===obj.background))out.background=obj.background;
+  if(obj&&typeof obj.grid==='boolean')out.grid=obj.grid;
+  if(obj&&['small','normal','large'].includes(obj.textSize))out.textSize=obj.textSize;
+  if(obj&&['white','black','charcoal','navy','yellow'].includes(obj.textColor))out.textColor=obj.textColor;
+  return out;
+}
+function pendingLauncherIconSettings(){
+  try{const raw=localStorage.getItem(ICON_PENDING_KEY);return raw?normalizeLauncherIconObject(JSON.parse(raw)):null;}catch(e){return null;}
+}
+function readLauncherIconSettings(){
+  const pending=pendingLauncherIconSettings();
+  if(pending){launcherIconSettings=pending;return launcherIconSettings;}
+  try{
+    if(window.AndroidIcon&&AndroidIcon.getIconStyle){
+      launcherIconSettings=normalizeLauncherIconObject(JSON.parse(String(AndroidIcon.getIconStyle()||'{}')));
+    }
+  }catch(e){}
+  return launcherIconSettings;
+}
+function iconSettingsHtml(){
+  const x=readLauncherIconSettings();
+  const opt=iconBackgroundOption(x.background);
+  const gridClass=x.grid?' grid':'';
+  const bgButtons=ICON_BACKGROUND_OPTIONS.map(o=>`<button class="icon-choice ${x.background===o.id?'on':''}" onclick="setLauncherIconBackground('${o.id}')"><span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:${o.color};border:1px solid #888;vertical-align:middle;margin-left:5px"></span>${o.label}</button>`).join('');
+  return `<h2>אייקון האפליקציה</h2><div class="icon-choice-row two"><button class="icon-choice ${x.mode==='picture'?'on':''}" onclick="setIconMode('picture')">ציור משפחה</button><button class="icon-choice ${x.mode==='text'?'on':''}" onclick="setIconMode('text')">צבע וכיתוב</button></div>${x.mode==='picture'?'<div style="text-align:center;margin:18px"><img src="approved-icon.webp" style="width:150px;height:150px;border-radius:28px" alt="אייקון ב.לאומי מאושר"></div>':''}<div style="display:${x.mode==='picture'?'none':'block'}">
+    <div class="icon-settings-preview-wrap"><div class="icon-settings-preview${gridClass}" style="background-color:${opt.color}"><span class="icon-preview-text ${x.textSize} ${x.textColor}">ב.לאומי</span></div></div>
+    <div class="icon-choice-group"><div class="icon-choice-title">גודל האותיות באייקון</div><div class="icon-choice-row">
+      <button class="icon-choice ${x.textSize==='small'?'on':''}" onclick="setLauncherIconTextSize('small')">קטן</button>
+      <button class="icon-choice ${x.textSize==='normal'?'on':''}" onclick="setLauncherIconTextSize('normal')">בינוני</button>
+      <button class="icon-choice ${x.textSize==='large'?'on':''}" onclick="setLauncherIconTextSize('large')">גדול</button>
+    </div></div>
+    <div class="icon-choice-group"><div class="icon-choice-title">צבע הרקע</div><div class="icon-choice-row">${bgButtons}</div></div>
+    <div class="icon-choice-group"><div class="icon-choice-title">קווי רשת</div><div class="icon-choice-row two">
+      <button class="icon-choice ${x.grid?'on':''}" onclick="setLauncherIconGrid(true)">עם קווים</button>
+      <button class="icon-choice ${!x.grid?'on':''}" onclick="setLauncherIconGrid(false)">ללא קווים</button>
+    </div></div>
+    <div class="icon-choice-group"><div class="icon-choice-title">צבע הכיתוב בתוך האייקון</div><div class="icon-choice-row">
+      <button class="icon-choice ${x.textColor==='white'?'on':''}" onclick="setLauncherIconTextColor('white')">לבן</button>
+      <button class="icon-choice ${x.textColor==='black'?'on':''}" onclick="setLauncherIconTextColor('black')">שחור</button>
+      <button class="icon-choice ${x.textColor==='charcoal'?'on':''}" onclick="setLauncherIconTextColor('charcoal')">אפור כהה</button>
+      <button class="icon-choice ${x.textColor==='navy'?'on':''}" onclick="setLauncherIconTextColor('navy')">כחול כהה</button>
+      <button class="icon-choice ${x.textColor==='yellow'?'on':''}" onclick="setLauncherIconTextColor('yellow')">צהוב</button>
+    </div></div>
+    </div><div class="icon-note">ברירת המחדל: ציור המשפחה שאישרת. אפשר לבחור גם צבע וכיתוב. האייקון מתעדכן ביציאה מהתוכנית.</div>
+    <button class="reset-design" onclick="resetLauncherIcon()">החזר אייקון לברירת המחדל</button>
+    <button class="close" onclick="backToSettings()">חזרה להגדרות</button>`;
+}
+function applyLauncherIconSettings(){
+  try{
+    launcherIconSettings=normalizeLauncherIconObject(launcherIconSettings);
+    localStorage.setItem(ICON_PENDING_KEY,JSON.stringify(launcherIconSettings));
+    toast('השינוי נשמר. האייקון יתעדכן כשתצא מהתוכנית');
+  }catch(e){toast('לא ניתן לשמור את שינוי האייקון');}
+  replaceOverlayHtml(iconSettingsHtml());
+}
+function commitPendingLauncherIcon(){
+  if(launcherIconCommitStarted)return;
+  const pending=pendingLauncherIconSettings();
+  if(!pending)return;
+  try{
+    if(window.AndroidIcon&&AndroidIcon.setLauncherIcon){
+      launcherIconCommitStarted=true;
+      localStorage.removeItem(ICON_PENDING_KEY);
+      AndroidIcon.setLauncherIcon(pending.background,!!pending.grid,pending.textSize,pending.textColor);
+    }
+  }catch(e){launcherIconCommitStarted=false;}
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')commitPendingLauncherIcon();});
+window.addEventListener('pagehide',commitPendingLauncherIcon);
+function setIconMode(mode){launcherIconSettings.mode=mode;applyLauncherIconSettings();}
+function setLauncherIconBackground(v){if(!ICON_BACKGROUND_OPTIONS.some(x=>x.id===v))return;launcherIconSettings.background=v;applyLauncherIconSettings();}
+function setLauncherIconGrid(v){launcherIconSettings.grid=!!v;applyLauncherIconSettings();}
+function setLauncherIconTextSize(v){if(!['small','normal','large'].includes(v))return;launcherIconSettings.textSize=v;applyLauncherIconSettings();}
+function setLauncherIconTextColor(v){if(!['white','black','charcoal','navy','yellow'].includes(v))return;launcherIconSettings.textColor=v;applyLauncherIconSettings();}
+function resetLauncherIcon(){launcherIconSettings={...ICON_DEFAULT};applyLauncherIconSettings();}
+function openIconSettings(){readLauncherIconSettings();openSettingsSubpage('icons');}
+
+function openSettings(){openOverlayHtml(settingsHtml(),{view:'settings-main'},'#settings');}
+function sizeControlRow(label,help,key,value,weightKey,weight){
+  return `<div class="central-type-row"><div class="central-type-label"><b>${esc(label)}</b><small>${esc(help)}</small></div><div class="central-stepper">
+    <button onclick="adjustTypography('${key}',-1)">−</button><div class="value">${value}</div><button onclick="adjustTypography('${key}',1)">+</button>
+    <button class="weight-cycle" onclick="cycleTypographyWeight('${weightKey}')"><span class="bmark" style="font-weight:${weight}">B</span><span>${weight}</span></button>
+  </div></div>`;
+}
+function typographySettingsHtml(){
+  const t=uiTypography();
+  return `<h2>גודל ועובי כתב</h2><div class="central-type-list">
+    ${sizeControlRow('כותרת עליונה','הכותרת „ב.לאומי”','headerSize',t.headerSize,'headerWeight',t.headerWeight)}
+    ${sizeControlRow('גרסה','הכיתוב גרסה מס׳','versionSize',t.versionSize,'versionWeight',t.versionWeight)}
+    ${sizeControlRow('שם קיצור הדרך','השם הראשי של כל קישור','shortcutSize',t.shortcutSize,'shortcutWeight',t.shortcutWeight)}
+    ${sizeControlRow('כתובת URL','השורה שמתחת לשם','urlSize',t.urlSize,'urlWeight',t.urlWeight)}
+    ${sizeControlRow('כפתורים תחתונים','גיבוי, שחזור והגדרות','toolSize',t.toolSize,'toolWeight',t.toolWeight)}
+    </div><div class="typography-help">כפתור B עובר בין עובי 400, 500, 600 ו־700. השינוי נשמר אוטומטית.</div>
+    <button class="close" onclick="backToSettings()">חזרה להגדרות</button>`;
+}
+function openTypographySettings(){openSettingsSubpage('typography');}
+function adjustTypography(key,delta){
+  const t=uiTypography();if(!Object.prototype.hasOwnProperty.call(t,key)||key.endsWith('Weight'))return;
+  const ranges={headerSize:[14,36],versionSize:[10,24],shortcutSize:[12,30],urlSize:[10,22],toolSize:[12,26]};
+  const [mn,mx]=ranges[key]||[10,30];t[key]=Math.max(mn,Math.min(mx,t[key]+delta));DATA.uiTypography=t;applyUiSettings();saveLocal();replaceOverlayHtml(typographySettingsHtml());
+}
+function cycleTypographyWeight(key){
+  const t=uiTypography();if(!Object.prototype.hasOwnProperty.call(t,key)||!key.endsWith('Weight'))return;
+  t[key]=nextFontWeight(t[key]);DATA.uiTypography=t;applyUiSettings();saveLocal();replaceOverlayHtml(typographySettingsHtml());
+}
+let colorTarget='headerBg';
+function currentColorPresetId(){const c=uiColors();return COLOR_PRESETS.find(p=>p.headerBg===c.headerBg&&p.headerText===c.headerText&&p.pageBg===c.pageBg&&p.cardBg===c.cardBg)?.id||'';}
+function colorPresetsHtml(){
+  const current=currentColorPresetId();
+  return `<div class="color-presets"><div class="color-presets-title">שילובים מוכנים</div><div class="color-presets-grid">${COLOR_PRESETS.map(p=>`<button class="color-preset-btn ${current===p.id?'on':''}" onclick="applyColorPreset('${p.id}')"><span class="color-preset-pair"><span class="color-preset-dot" style="background:${p.headerBg}"></span><span class="color-preset-dot" style="background:${p.headerText}"></span></span><span class="color-preset-name">${esc(p.name)}</span></button>`).join('')}</div></div>`;
+}
+function colorTargetsHtml(){
+  const c=uiColors();const rows=[['headerBg','צבע הרקע העליון',c.headerBg],['headerText','צבע הכיתוב העליון',c.headerText],['pageBg','צבע רקע המסך',c.pageBg],['cardBg','צבע כרטיסי הקישורים',c.cardBg]];
+  return rows.map(([key,label,color])=>`<button class="color-target-row ${colorTarget===key?'on':''}" onclick="selectColorTarget('${key}')"><span class="color-label"><b>${esc(label)}</b><small>${color}</small></span><span class="current-swatch" style="background:${color}"></span><span class="radio"></span></button>`).join('');
+}
+function colorPaletteHtml(){const c=uiColors();const current=c[colorTarget]||c.headerBg;return COLOR_PALETTE.map(color=>`<button class="color-swatch ${color===current?'on':''}" style="background:${color}" title="${color}" onclick="chooseUiColor('${color}')"></button>`).join('');}
+function colorSettingsHtml(){
+  const c=uiColors();
+  return `<h2>צבעים</h2>${colorPresetsHtml()}<div class="color-targets">${colorTargetsHtml()}</div><div class="color-palette">${colorPaletteHtml()}</div>
+    <div class="color-preview" style="background:${c.headerBg};color:${c.headerText}"><div class="preview-title">ב.לאומי</div><div class="preview-version">גרסה מס׳ ${APP_VERSION}</div></div>
+    <div class="typography-help">בחר קודם איזה אזור לשנות, ואחר כך בחר צבע. השינוי נשמר אוטומטית.</div>
+    <button class="close" onclick="backToSettings()">חזרה להגדרות</button>`;
+}
+function openColorSettings(){openSettingsSubpage('colors');}
+function selectColorTarget(key){if(['headerBg','headerText','pageBg','cardBg'].includes(key))colorTarget=key;replaceOverlayHtml(colorSettingsHtml());}
+function chooseUiColor(color){const c=uiColors();c[colorTarget]=normalizeHexColor(color,c[colorTarget]);DATA.uiColors=c;applyUiSettings();saveLocal();replaceOverlayHtml(colorSettingsHtml());}
+function applyColorPreset(id){const p=COLOR_PRESETS.find(x=>x.id===id);if(!p)return;DATA.uiColors={headerBg:p.headerBg,headerText:p.headerText,pageBg:p.pageBg,cardBg:p.cardBg};applyUiSettings();saveLocal();replaceOverlayHtml(colorSettingsHtml());}
+function toggleShowUrl(){const p=uiPrefs();p.showUrl=!p.showUrl;DATA.uiPrefs=p;saveLocal();replaceOverlayHtml(settingsHtml());renderApp();}
+function resetDesignSettings(){
+  if(!confirm('להחזיר את כל הגדרות העיצוב לברירת המחדל?'))return;
+  DATA.uiTypography={...UI_TYPO_DEFAULT};DATA.uiColors={...UI_COLOR_DEFAULT};DATA.uiPrefs={...UI_PREFS_DEFAULT};applyUiSettings();saveLocal();replaceOverlayHtml(settingsHtml());renderApp();
+}
+
+function initHistory(){history.replaceState({view:'app'},'',location.href.split('#')[0]);}
+window.addEventListener('popstate',e=>{
+  const state=e.state||{view:'app'};
+  if(state.view==='settings-main'){
+    replaceOverlayHtml(settingsHtml());
+    scrollTo(0,0);
+    return;
+  }
+  if(state.view==='settings-sub'){
+    replaceOverlayHtml(state.page==='colors'?colorSettingsHtml():state.page==='icons'?iconSettingsHtml():typographySettingsHtml());
+    scrollTo(0,0);
+    return;
+  }
+  removeOverlay();renderApp();scrollTo(0,0);
+});
+
+function wireOverlayFocus(){
+  const sheet=document.querySelector('#ov .sheet');
+  if(!sheet)return;
+  const inputs=sheet.querySelectorAll('input, textarea');
+  inputs.forEach(el=>el.addEventListener('focus',()=>{
+    setTimeout(()=>{try{el.scrollIntoView({block:'center',behavior:'smooth'});}catch(e){}},220);
+  }));
+  const first=sheet.querySelector('input[autofocus], textarea[autofocus]');
+  if(first){setTimeout(()=>{try{first.focus({preventScroll:true});}catch(e){first.focus();}},80);}
+}
+function openOverlayHtml(inner,state={view:'overlay'},hash='#overlay',isForm=false){
+  removeOverlay();
+  const d=document.createElement('div');d.id='ov';d.className='overlay';
+  d.innerHTML='<div class="sheet'+(isForm?' form-sheet':'')+'">'+inner+'</div>';
+  d.onclick=e=>{if(e.target===d) closeOverlay();};
+  document.body.appendChild(d);
+  wireOverlayFocus();
+  history.pushState(state,'',hash);
+}
+function replaceOverlayHtml(inner,isForm=false){
+  removeOverlay();
+  const d=document.createElement('div');d.id='ov';d.className='overlay';
+  d.innerHTML='<div class="sheet'+(isForm?' form-sheet':'')+'">'+inner+'</div>';
+  d.onclick=e=>{if(e.target===d) closeOverlay();};
+  document.body.appendChild(d);
+  wireOverlayFocus();
+}
+function openSettingsSubpage(page){
+  const valid=['colors','typography','icons'].includes(page)?page:'typography';
+  const hash=valid==='colors'?'#settings-colors':valid==='icons'?'#settings-icons':'#settings-typography';
+  history.pushState({view:'settings-sub',page:valid},'',hash);
+  replaceOverlayHtml(valid==='colors'?colorSettingsHtml():valid==='icons'?iconSettingsHtml():typographySettingsHtml());
+  scrollTo(0,0);
+}
+function backToSettings(){
+  if(history.state?.view==='settings-sub') history.back();
+  else replaceOverlayHtml(settingsHtml());
+}
+function removeOverlay(){document.getElementById('ov')?.remove();}
+function closeOverlay(){
+  const view=history.state?.view;
+  if(view==='overlay'||view==='settings-main'||view==='settings-sub') history.back();
+  else removeOverlay();
+}
+
+function tapLink(id){if(Date.now()<suppressClickUntil)return;openShortcut(id);}
+function lpStart(ev,id){
+  lpCancel();lpId=String(id);
+  if(ev.touches?.length){lpX=ev.touches[0].clientX;lpY=ev.touches[0].clientY;}
+  lpTimer=setTimeout(()=>{const chosen=lpId;lpTimer=null;lpId=null;suppressClickUntil=Date.now()+900;try{navigator.vibrate?.(20)}catch(e){}if(chosen)openLinkActions(chosen);},600);
+}
+function lpMove(ev){if(!lpTimer||!lpId||!ev.touches?.length)return;const dx=Math.abs(ev.touches[0].clientX-lpX),dy=Math.abs(ev.touches[0].clientY-lpY);if(dx>14||dy>14)lpCancel();}
+function lpEnd(){lpCancel();} function lpCancel(){if(lpTimer)clearTimeout(lpTimer);lpTimer=null;lpId=null;}
+function mouseLpStart(ev,id){if(ev.button!==0)return;lpStart(ev,id);} function mouseLpEnd(){lpEnd();}
+
+function openLinkActions(id){
+  actionId=String(id);
+  openEdit(id,false);
+}
+function actionEdit(){openEdit(actionId,true);}
+
+let installedAppsCache=[];
+let selectedAppPackages=new Set();
+
+function openNewLink(){
+  editId=null;editType='website';
+  openOverlayHtml(`<h2>הוספת קיצור דרך</h2>
+    <div class="form-stack">
+      <div class="segment"><button id="webBtn" class="on" onclick="setType('website')">אתר</button><button id="appBtn" onclick="openInstalledAppsPicker()">אפליקציה</button></div>
+      <input id="editTitle" class="field" placeholder="שם הקישור" autofocus>
+      <div class="urlrow"><input id="editUrl" class="field" dir="ltr" placeholder="https://..."><button class="paste" onclick="pasteUrl()">הדבק URL</button></div>
+    </div>
+    <div class="sticky-actions"><button class="save" onclick="saveNewLinkFromForm()">שמור</button><button class="close" onclick="closeOverlay()">ביטול</button></div>`,{view:'overlay'},'#overlay',true);
+}
+
+function openInstalledAppsPicker(){
+  if(!(window.AndroidApps&&AndroidApps.getLaunchableApps))return toast('רשימת האפליקציות זמינה בגרסת APK');
+  let raw='[]';
+  try{raw=AndroidApps.getLaunchableApps();}catch(e){}
+  try{installedAppsCache=JSON.parse(String(raw||'[]'));}catch(e){installedAppsCache=[];}
+  if(!Array.isArray(installedAppsCache)||!installedAppsCache.length)return toast('לא נמצאו אפליקציות');
+  selectedAppPackages=new Set();
+  replaceOverlayHtml(`<h2>בחר אפליקציות</h2>
+    <input id="appSearch" class="app-picker-search" placeholder="חיפוש אפליקציה" oninput="renderInstalledAppsRows()">
+    <div id="appPickerCount" class="app-picker-count">לא נבחרו אפליקציות</div>
+    <div id="appRows" class="app-picker-list"></div>
+    <div class="sticky-actions"><button class="save" onclick="addSelectedInstalledApps()">הוסף לתיק</button><button class="close" onclick="openNewLink()">חזרה</button></div>`,true);
+  renderInstalledAppsRows();
+}
+function renderInstalledAppsRows(){
+  const host=document.getElementById('appRows');if(!host)return;
+  const q=(document.getElementById('appSearch')?.value||'').trim().toLowerCase();
+  const rows=installedAppsCache.filter(a=>!q||String(a.name||'').toLowerCase().includes(q)||String(a.packageName||'').toLowerCase().includes(q));
+  host.innerHTML=rows.length?rows.map(a=>{const pkg=String(a.packageName||'');const on=selectedAppPackages.has(pkg);return `<button class="app-row ${on?'on':''}" onclick="toggleInstalledApp('${jsq(pkg)}')">${a.icon?`<img src="${esc(a.icon)}" alt="">`:'<span class="fallback">📱</span>'}<span><div class="app-row-name">${esc(a.name||pkg)}</div><div class="app-row-pkg">${esc(pkg)}</div></span><span class="app-row-check">${on?'✓':'○'}</span></button>`;}).join(''):'<div class="empty" style="padding:16px">אין תוצאות</div>';
+  updateInstalledAppsCount();
+}
+function toggleInstalledApp(pkg){if(selectedAppPackages.has(pkg))selectedAppPackages.delete(pkg);else selectedAppPackages.add(pkg);renderInstalledAppsRows();}
+function updateInstalledAppsCount(){const el=document.getElementById('appPickerCount');if(el)el.textContent=selectedAppPackages.size?'נבחרו '+selectedAppPackages.size+' אפליקציות':'לא נבחרו אפליקציות';}
+function addSelectedInstalledApps(){
+  if(!selectedAppPackages.size)return toast('בחר לפחות אפליקציה אחת');
+  const now=Date.now();let added=0;
+  for(const a of installedAppsCache){
+    const pkg=String(a.packageName||'');if(!selectedAppPackages.has(pkg))continue;
+    if(DATA.links.some(l=>String(l.packageName||'')===pkg))continue;
+    DATA.links.push({id:uid('l'),folderId:STOCKS_ID,title:String(a.name||pkg),url:'',shortcutType:'app',packageName:pkg,appIcon:String(a.icon||''),tag:'',createdAt:now+added,updatedAt:now+added});added++;
+  }
+  if(!added)return toast('האפליקציות שנבחרו כבר קיימות');
+  saveLocal();toast(added===1?'האפליקציה נוספה':'האפליקציות נוספו');closeOverlay();
+}
+
+function openEdit(id,replaceCurrent){
+  const l=findLink(id);if(!l)return;editId=String(id);editType=l.shortcutType||'website';
+  const appNative=editType==='app'&&l.packageName;
+  const x=`<h2>עריכת קיצור דרך</h2>
+    <div class="form-stack">
+      <div class="segment"><button id="webBtn" class="${editType==='website'?'on':''}" onclick="setType('website')">אתר</button><button id="appBtn" class="${editType==='app'?'on':''}" onclick="setType('app')">אפליקציה</button></div>
+      <input id="editTitle" class="field" value="${esc(l.title)}" placeholder="שם הקישור" autofocus>
+      ${appNative?`<div class="field" style="background:#f3f3f3;direction:ltr">${esc(l.packageName)}</div>`:`<div class="urlrow"><input id="editUrl" class="field" dir="ltr" value="${esc(l.url||'')}" placeholder="https://..."><button class="paste" onclick="pasteUrl()">הדבק URL</button></div>`}
+    </div>
+    <div class="sticky-actions"><button class="save" onclick="saveEdit()">שמור</button><button class="close" onclick="closeOverlay()">ביטול</button><button class="close danger" onclick="deleteEditingLink()">מחיקת קיצור דרך</button></div>`;
+  replaceCurrent&&document.getElementById('ov')?replaceOverlayHtml(x,true):openOverlayHtml(x,{view:'overlay'},'#overlay',true);
+}
+function setType(x){editType=x;document.getElementById('webBtn')?.classList.toggle('on',x==='website');document.getElementById('appBtn')?.classList.toggle('on',x==='app');}
+async function pasteUrl(){
+  const input=document.getElementById('editUrl');
+  if(!input)return;
+  input.focus();
+
+  const putText=(value)=>{
+    const text=String(value||'').trim();
+    if(!text)return false;
+    input.value=text;
+    input.dispatchEvent(new Event('input',{bubbles:true}));
+    input.dispatchEvent(new Event('change',{bubbles:true}));
+    toast('הכתובת הודבקה');
+    return true;
+  };
+
+  /* בגרסת APK נוכל לקבל את הלוח ישירות מגשר Android, אם הוא קיים. */
+  try{
+    if(window.AndroidClipboard?.getText && putText(window.AndroidClipboard.getText()))return;
+    if(window.Android?.getClipboardText && putText(window.Android.getClipboardText()))return;
+  }catch(e){}
+
+  /* הדרך הרגילה בדפדפן/HTML מקומי. */
+  try{
+    if(navigator.clipboard?.readText){
+      const text=await navigator.clipboard.readText();
+      if(putText(text))return;
+    }
+  }catch(e){}
+
+  /* גיבוי לדפדפנים שמאפשרים paste באמצעות פקודה ישנה. */
+  try{
+    let pasted='';
+    const onPaste=(ev)=>{
+      pasted=(ev.clipboardData||window.clipboardData)?.getData('text')||'';
+      if(pasted){ev.preventDefault();putText(pasted);}
+    };
+    input.addEventListener('paste',onPaste,{once:true});
+    const ok=document.execCommand && document.execCommand('paste');
+    if(ok && (pasted||input.value))return;
+    input.removeEventListener('paste',onPaste);
+  }catch(e){}
+
+  input.focus();
+  toast('הדפדפן חסם קריאת לוח. ב-APK ההדבקה תפעל ישירות');
+}
+function saveNewLinkFromForm(){
+  const title=document.getElementById('editTitle')?.value.trim()||'';
+  let url=document.getElementById('editUrl')?.value.trim()||'';
+  if(!title)return toast('נא להקליד שם לקישור');
+  if(url&&editType==='website'&&!/^https?:\/\//i.test(url))url='https://'+url;
+  DATA.links.push({id:uid('l'),folderId:STOCKS_ID,title,url,shortcutType:editType,tag:'',createdAt:Date.now(),updatedAt:Date.now()});
+  saveLocal();toast('קיצור הדרך נוסף');closeOverlay();
+}
+function saveEdit(){
+  const l=findLink(editId);if(!l)return;
+  const title=document.getElementById('editTitle')?.value.trim()||'';
+  let url=document.getElementById('editUrl')?.value.trim()||l.url||'';
+  if(!title)return toast('נא להקליד שם');
+  if(url&&editType==='website'&&!/^https?:\/\//i.test(url))url='https://'+url;
+  l.title=title;l.url=url;l.shortcutType=editType;l.updatedAt=Date.now();
+  if(editType==='website'){delete l.packageName;delete l.appIcon;}
+  saveLocal();toast('השינוי נשמר');closeOverlay();
+}
+function deleteEditingLink(){
+  const l=findLink(editId);if(!l)return;
+  if(!confirm('למחוק את קיצור הדרך "'+l.title+'"?'))return;
+  const id=String(editId);DATA.links=DATA.links.filter(x=>String(x.id)!==id);editId=null;
+  saveLocal();toast('קיצור הדרך נמחק');closeOverlay();
+}
+
+function openShortcut(id){
+  const l=findLink(id);if(!l)return;
+  if(l.shortcutType==='app'&&l.packageName){
+    try{if(window.AndroidApps&&AndroidApps.launchApp){AndroidApps.launchApp(String(l.packageName));return;}}catch(e){}
+  }
+  if(!l.url)return openEdit(id,false);
+  if(l.shortcutType==='app'&&String(l.url).startsWith('app:')){
+    const pkg=String(l.url).slice(4).trim();
+    if(pkg&&window.AndroidApps?.openPackage){
+      try{if(window.AndroidApps.openPackage(pkg))return;}catch(e){}
+    }
+    toast('לא ניתן לפתוח את האפליקציה');
+    return;
+  }
+  const isAndroid=/Android/i.test(navigator.userAgent||'');
+  const isPlay=/play\.google\.com\/store\/apps\/details/i.test(l.url||'');
+  if(isAndroid&&(l.shortcutType==='app'||isPlay)){
+    const p=extractPlayPackage(l.url);
+    if(p){location.href='intent://#Intent;package='+p+';action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;S.browser_fallback_url='+encodeURIComponent(l.url)+';end';return;}
+  }
+  location.href=l.url;
+}
+function extractPlayPackage(url){
+  try{const u=new URL(url);return u.hostname.includes('play.google.com')?(u.searchParams.get('id')||''):'';}
+  catch(e){const m=String(url||'').match(/[?&]id=([^&]+)/);return m?decodeURIComponent(m[1]):'';}
+}
+
+function pad(n){return String(n).padStart(2,'0');}
+function stamp(){const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'_'+pad(d.getHours())+'-'+pad(d.getMinutes());}
+function displayStamp(){const d=new Date();return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear()+' '+pad(d.getHours())+':'+pad(d.getMinutes());}
+function backupPayload(){
+  return {app:'ב.לאומי',version:1,appVersion:APP_VERSION,createdAt:new Date().toISOString(),folders:[canonicalFolder()],links:DATA.links,uiTypography:uiTypography(),uiColors:uiColors(),uiPrefs:uiPrefs(),launcherIcon:readLauncherIconSettings()};
+}
+function openBackupMenu(){
+  backupSettingsOpen=false;
+  openOverlayHtml(`<h2>גיבוי ושחזור</h2><div class="form-stack"><button class="setting-nav-row" onclick="downloadBackup()">גיבוי נתונים</button><button class="setting-nav-row" onclick="AndroidBackup.backupApk()">גיבוי תוכנית (APK)</button><button class="setting-nav-row" onclick="chooseRestore()">שחזור מקובץ</button><button class="setting-nav-row" onclick="openBackupSettings()">הגדרות גיבוי</button><button class="setting-nav-row" onclick="AndroidBackup.exportData(JSON.stringify(backupPayload(),null,2))">עותק נתונים ל־Google Drive</button><button class="setting-nav-row" onclick="AndroidBackup.exportApk()">עותק APK ל־Google Drive</button></div><p class="icon-note">גיבוי נתונים יוצר קובץ חדש עם תאריך ושעה. גיבוי APK שומר עותק אחד לכל גרסה, בטלפון ובתיקיית הענן שנבחרה.</p><p>${DATA.lastBackup?'גיבוי אחרון: '+esc(DATA.lastBackup):'עדיין לא נוצר גיבוי'}</p><button class="close" onclick="closeOverlay()">סגור</button>`,{view:'overlay'},'#backup');
+}
+function backupSettingsHtml(){const x=JSON.parse(AndroidBackup.status());return `<h2>הגדרות גיבוי</h2><p>שמירה בטלפון: Download/גיבויים/ב.לאומי</p><p>${x.cloud?'נבחרה תיקיית ענן. ההרשאה נשמרת להמשך.':'טרם נבחרה תיקיית ענן.'}</p><p class="icon-note">בחר תיקייה ב־Google Drive, למשל „גיבויים מהטלפון”. בתוכה תיווצר תיקיית ב.לאומי. ניתן לבחור גם ספק קבצים אחר שמאפשר שמירה בתיקייה. אם Google Drive לא מופיע בבחירת תיקייה, השתמש בכפתור „עותק ל־Google Drive” בתפריט הגיבוי.</p><button class="setting-nav-row" onclick="AndroidBackup.configureCloud()">${x.cloud?'שינוי תיקיית הענן':'בחירת תיקיית ענן'}</button>${x.cloud?'<button class="setting-nav-row" onclick="disconnectBackupCloud()">ניתוק תיקיית הענן</button>':''}<button class="close" onclick="openBackupMenu()">חזרה</button>`;}
+let backupSettingsOpen=false;
+function openBackupSettings(){backupSettingsOpen=true;replaceOverlayHtml(backupSettingsHtml());}
+function refreshBackupSettings(){if(backupSettingsOpen&&document.getElementById('ov'))replaceOverlayHtml(backupSettingsHtml());}
+function disconnectBackupCloud(){AndroidBackup.disconnectCloud();refreshBackupSettings();}
+function downloadBackup(){
+  if(window.AndroidBackup){AndroidBackup.backupData(JSON.stringify(backupPayload(),null,2));return;}
+  toast('הגיבוי זמין באפליקציית ב.לאומי');
+}
+function backupCompleted(){DATA.lastBackup=displayStamp();saveLocal();renderApp();}
+function extractStocksFromBackup(obj){
+  if(!obj||typeof obj!=='object'||!Array.isArray(obj.links))throw Error('קובץ לא מתאים');
+  let links;
+  if(obj.app==='ב.לאומי')links=obj.links;
+  else if(obj.app==='בנקים' && Array.isArray(obj.folders) && obj.folders.some(f=>String(f.id)===STOCKS_ID)) {
+    // The old BTL release accidentally labeled its own backup as banks.
+    links=obj.links.filter(l=>String(l.folderId)===STOCKS_ID);
+  }
+  else {
+    if(obj.app && !['תיקיות 1','תיקיות 2','תיקיות 3','תיקיות','Tikiyot'].includes(obj.app))throw Error('זהו גיבוי של תוכנית אחרת');
+    const f=Array.isArray(obj.folders)?obj.folders.find(x=>String(x.id)===STOCKS_ID)||obj.folders.find(x=>/^\s*(?:[\d.]+\s*[-–]?\s*)?ב\.לאומי\s*$/.test(String(x.name||''))):null;
+    if(f)links=obj.links.filter(l=>String(l.folderId)===String(f.id));
+    else if(!obj.app && obj.links.length && obj.links.every(l=>String(l.folderId)===STOCKS_ID))links=obj.links;
+    else throw Error('לא נמצאה תיקיית ב.לאומי');
+  }
+  const ids=new Set();
+  const clean=links.map((l,i)=>{
+    if(!l||typeof l!=='object'||typeof l.title!=='string'||l.title.length>2000)throw Error('פריט לא תקין בגיבוי');
+    if(l.shortcutType && !['app','website'].includes(l.shortcutType))throw Error('סוג קיצור לא תקין');
+    const type=l.shortcutType||'website';
+    if(type==='app'&&(!l.packageName||!/^[a-zA-Z][\w]*(?:\.[\w]+)+$/.test(l.packageName)))throw Error('מזהה אפליקציה לא תקין');
+    if(l.url && !/^(https?:|intent:|market:|tel:|mailto:)/i.test(l.url))throw Error('כתובת קישור לא תקינה');
+    let id=String(l.id||'restored_'+i);if(ids.has(id))id+='_'+i;ids.add(id);
+    return {...l,id,folderId:STOCKS_ID,shortcutType:type,appIcon:typeof l.appIcon==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(l.appIcon)?l.appIcon:''};
+  });
+  return {links:clean,uiTypography:obj.uiTypography,uiColors:obj.uiColors,uiPrefs:obj.uiPrefs,launcherIcon:obj.launcherIcon};
+}
+function chooseRestore(){document.getElementById('restoreInput').click();}
+document.getElementById('restoreInput').addEventListener('change',async function(){
+  const file=this.files?.[0];this.value='';if(!file)return;
+  try{
+    if(file.size>25*1014*1014)throw Error('הקובץ גדול מדי');
+    const obj=JSON.parse(await file.text()), restored=extractStocksFromBackup(obj);
+    const date=obj.createdAt?new Date(obj.createdAt).toLocaleString('he-IL'):'לא צוין';
+    if(!confirm('לשחזר את הגיבוי?\nתאריך: '+date+'\nגרסה: '+(obj.appVersion||obj.version||'לא צוינה')+'\nמספר קיצורים: '+restored.links.length+'\nהנתונים הקיימים יוחלפו.'))return;
+    const next={folders:[canonicalFolder()],links:restored.links,lastBackup:DATA.lastBackup||'',uiTypography:normalizeUiTypography(restored.uiTypography||DATA.uiTypography),uiColors:normalizeUiColors(restored.uiColors||DATA.uiColors),uiPrefs:normalizeUiPrefs(restored.uiPrefs||DATA.uiPrefs)};
+    // Persist before replacing the visible state. A failed write preserves old data.
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(next));DATA=next;
+    if(restored.launcherIcon){launcherIconSettings=normalizeLauncherIconObject(restored.launcherIcon);localStorage.setItem(ICON_PENDING_KEY,JSON.stringify(launcherIconSettings));AndroidIcon.setStyle(JSON.stringify(launcherIconSettings));}
+    applyUiSettings();renderApp();if(document.getElementById('ov'))closeOverlay();toast('השחזור הושלם');
+  }catch(e){toast('השחזור לא בוצע: '+e.message);}
+});
+
+function applyLauncherIconSettings(){
+  launcherIconSettings=normalizeLauncherIconObject(launcherIconSettings);
+  localStorage.setItem(ICON_PENDING_KEY,JSON.stringify(launcherIconSettings));
+  AndroidIcon.setStyle(JSON.stringify(launcherIconSettings));
+  replaceOverlayHtml(iconSettingsHtml());toast('האייקון יתעדכן ביציאה מהתוכנית');
+}
+function commitPendingLauncherIcon(){const p=pendingLauncherIconSettings();if(p&&window.AndroidIcon){AndroidIcon.setStyle(JSON.stringify(p));localStorage.removeItem(ICON_PENDING_KEY);}}
+function ensureDefaultLauncherIcon(){}
+loadLocal();
+applyUiSettings();
+ensureDefaultLauncherIcon();
+initHistory();
+renderApp();
+</script>
+</body>
+</html>
+
