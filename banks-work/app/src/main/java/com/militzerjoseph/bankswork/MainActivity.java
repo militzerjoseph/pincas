@@ -147,7 +147,7 @@ public class MainActivity extends Activity {
             }catch(Exception e){error+=(error.isEmpty()?"":"; ")+"שמירה בענן נכשלה — בדוק הרשאה או בחר תיקייה מחדש";}
             boolean l=local,c=cloud;String err=error;
             runOnUiThread(()->{busy=false;if(destroyed)return;
-                if(!apk&&l)js("backupCompleted("+JSONObject.quote(stamp)+")");
+                if(!apk&&(l||c))js("backupCompleted("+JSONObject.quote(stamp)+")");
                 String m=(l?"הגיבוי נשמר בטלפון":"לא נשמר גיבוי בטלפון")+(tree.isEmpty()?"":c?" וגם בתיקיית הענן":"; לא נשמר בענן");
                 if(!err.isEmpty())m+="\n"+err;
                 new AlertDialog.Builder(this).setTitle(apk?"גיבוי תוכנית (APK)":"גיבוי נתונים").setMessage(m).setPositiveButton("אישור",null).show();
