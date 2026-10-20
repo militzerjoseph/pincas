@@ -819,7 +819,7 @@ function chooseRestore(){document.getElementById('restoreInput').click();}
 document.getElementById('restoreInput').addEventListener('change',async function(){
   const file=this.files?.[0];this.value='';if(!file)return;
   try{
-    if(file.size>25*1014*1014)throw Error('הקובץ גדול מדי');
+    if(file.size>25*1024*1024)throw Error('הקובץ גדול מדי');
     const obj=JSON.parse(await file.text()), restored=extractStocksFromBackup(obj);
     const date=obj.createdAt?new Date(obj.createdAt).toLocaleString('he-IL'):'לא צוין';
     if(!confirm('לשחזר את הגיבוי?\nתאריך: '+date+'\nגרסה: '+(obj.appVersion||obj.version||'לא צוינה')+'\nמספר קיצורים: '+restored.links.length+'\nהנתונים הקיימים יוחלפו.'))return;
