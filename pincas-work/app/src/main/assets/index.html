@@ -587,6 +587,14 @@ h1{font-size:22px!important}
 .home-tx-table tbody tr.tx-clickable{cursor:pointer}
 .home-tx-table tbody tr.tx-clickable:hover{background:#f6efdd}
 
+.settings-stack{display:grid;gap:12px;max-width:560px;margin:auto}
+.backup-actions{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin:10px 0}
+.backup-folder{font-size:16px;font-weight:700;overflow-wrap:anywhere;margin:8px 0}
+.backup-result{font-size:14px;line-height:1.6;overflow-wrap:anywhere;margin-top:8px}
+.backup-menu-actions{display:grid;gap:10px}
+.backup-menu-actions button{min-height:48px;background:#f6efdd;color:#2146c8}
+button:disabled{opacity:.55;cursor:wait}
+.settings-stack p{font-size:15px;line-height:1.6}
 </style>
 </head>
 <body>
@@ -610,7 +618,7 @@ h1{font-size:22px!important}
     </div>
   </div>
 </div>
-<div class="top"><button onclick="view('home')">🏠 לוח הבקרה</button><button onclick="view('cats')">⚙️ קטגוריות</button><button onclick="backup()">💾 גיבוי</button><button onclick="openPrintChoice()">🖨️ הדפסה</button><label onclick="return openRestorePicker(event)" style="background:#fbf7ec;color:#2146c8;padding:10px 13px;border-radius:10px;font-weight:bold;cursor:pointer;white-space:nowrap">📥 שחזור<input id="restore" type="file" accept=".json" hidden onchange="restoreData(event)"></label><button onclick="view('settings')">⚙️ הגדרות</button></div>
+<div class="top"><button onclick="view('home')">🏠 לוח הבקרה</button><button onclick="view('cats')">⚙️ קטגוריות</button><button onclick="openBackupMenu()">💾 גיבוי</button><button onclick="openPrintChoice()">🖨️ הדפסה</button><label onclick="return openRestorePicker(event)" style="background:#fbf7ec;color:#2146c8;padding:10px 13px;border-radius:10px;font-weight:bold;cursor:pointer;white-space:nowrap">📥 שחזור<input id="restore" type="file" accept=".json" hidden onchange="restoreData(event)"></label><button onclick="view('settings')">⚙️ הגדרות</button></div>
 </header>
 <div id="lastBackupStatus" class="backup-status"></div><main>
 <section id="home" class="view active">
@@ -703,44 +711,62 @@ h1{font-size:22px!important}
 <section id="settings" class="view">
   <div class="panel">
     <h2>⚙️ הגדרות ופרטי גרסה</h2>
-    <div style="display:grid;gap:10px;max-width:520px">
+    <div class="settings-stack">
       <div class="card">
         <div class="label">גודל תצוגה</div>
-        <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px">
-          <input id="displayScaleInput" type="number" min="60" max="120" step="1"
-                 inputmode="numeric"
-                 style="width:86px;text-align:center;font-size:20px;font-weight:800;padding:8px;border:1px solid #cfd6df;border-radius:8px">
-          <span style="font-size:20px;font-weight:800">%</span>
-          <button type="button" onclick="applyDisplayScaleSetting()"
-                  style="padding:8px 14px;border-radius:8px;font-weight:800">החל</button>
+        <div class="backup-actions">
+          <input id="displayScaleInput" type="number" min="60" max="120" step="1" inputmode="numeric" style="width:86px;text-align:center">
+          <span>%</span><button type="button" onclick="applyDisplayScaleSetting()">החל</button>
         </div>
-        <div class="muted" style="margin-top:7px">המספר האחרון נשמר עד לשינוי הבא.</div>
+        <div class="muted">הגודל נשמר עד לשינוי הבא ונכלל בגיבוי הנתונים החדש.</div>
       </div>
       <div class="card">
-        <div class="label">גיבוי לענן</div>
-        <div id="cloudBackupStatus" class="num" style="font-size:16px;margin-top:7px">לא נבחרה תיקיית ענן</div>
-        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:9px">
-          <button type="button" onclick="chooseCloudBackupFolder()"
-                  style="padding:8px 12px;border-radius:8px;font-weight:800">בחר תיקיית Google Drive</button>
-          <button type="button" onclick="clearCloudBackupFolder()"
-                  style="padding:8px 12px;border-radius:8px;font-weight:800">בטל בחירה</button>
+        <div class="label">תיקיית גיבויים בטלפון</div>
+        <div id="localBackupStatus" class="backup-folder"></div>
+        <div id="localBackupDate" class="muted"></div>
+        <div class="backup-actions">
+          <button type="button" onclick="chooseLocalBackupFolder()">בחר / שנה תיקייה בטלפון</button>
+          <button type="button" onclick="clearLocalBackupFolder()">חזור לברירת מחדל</button>
         </div>
-        <div class="muted" style="margin-top:7px">
-          לאחר בחירה חד־פעמית, לחיצה על „גיבוי” תשמור עותק בטלפון וגם בתיקייה שבחרת.
-        </div>
+        <div class="muted">ברירת מחדל: Download ← גיבויים ← פנקס חדש. בבחירת תיקיית גיבויים אחרת תיווצר בתוכה תיקיית „פנקס חדש”.</div>
       </div>
-      <div class="card"><div class="label">סוג אפליקציה</div><div class="num" style="font-size:18px">APK היברידי</div></div>
-      <div class="card"><div class="label">מספר גרסה</div><div class="num" style="font-size:18px">1.0</div></div>
-      <div class="card"><div class="label">תאריך עדכון</div><div class="num" style="font-size:18px">01/10/2026</div></div>
-      <div class="card"><div class="label">מקור הנתונים</div><div class="num" style="font-size:18px">אחסון מקומי במכשיר + גיבוי ל-Google Drive</div></div>
-      <div class="card"><div class="label">תאימות שחזור</div><div class="num" style="font-size:18px">גיבוי GS או גיבוי HTML</div></div>
-      <div class="card"><div class="label">מפתח אחסון</div><div class="num" style="font-size:16px;word-break:break-all">home_budget_pro_v3_categories</div></div>
       <div class="card">
-        <div class="label">עיקרי העדכון</div>
-        <div style="font-size:16px;font-weight:700;line-height:1.7;margin-top:7px">
-          החזרת „לחודשים הבאים”; ברירת מחדל „דברי מכולת” בהוצאות; „משכורת בעל” כברירת המחדל הראשונה בהכנסות; כפתור הגדרות/פרטי גרסה; ושמירת כל תיקוני התצוגה והדוחות של גרסאות הייחוס האחרונות.
+        <div class="label">עותק נוסף ב־Google Drive</div>
+        <div id="cloudBackupStatus" class="backup-folder"></div>
+        <div id="cloudBackupDate" class="muted"></div>
+        <div class="backup-actions">
+          <button type="button" onclick="chooseCloudBackupFolder()">בחר / שנה תיקיית Google Drive</button>
+          <button type="button" onclick="clearCloudBackupFolder()">בטל בחירה</button>
         </div>
+        <div class="muted">בבורר התיקיות בחר Google Drive ואת תיקיית הגיבויים שלך. תיווצר בתוכה תיקיית „פנקס חדש”. הבחירה נשמרת לגיבויים הבאים.</div>
+        <div class="muted" style="margin-top:6px">בסיום מוצגת תוצאה נפרדת לטלפון ולתיקייה הנוספת. ניתן לבדוק את הקובץ גם באפליקציית Drive.</div>
       </div>
+      <div class="card">
+        <div class="label">גיבוי ושחזור</div>
+        <div class="backup-actions">
+          <button type="button" data-backup-action onclick="backup()">💾 גיבוי נתונים</button>
+          <button type="button" data-backup-action onclick="backupProgram()">📦 גיבוי תוכנית APK</button>
+          <button type="button" onclick="requestRestore()">📥 שחזור נתונים</button>
+        </div>
+        <div id="backupOperationStatus" class="backup-result" role="status" aria-live="polite"></div>
+        <div id="backupResultDetails" class="backup-result" style="white-space:pre-line"></div>
+      </div>
+      <div class="card">
+        <details><summary>📖 חוברת הפעלה — גיבוי ושחזור</summary>
+          <p><b>גיבוי נתונים:</b> שומר תנועות, קטגוריות, החודש והשנה וגודל התצוגה. בכל לחיצה נוצר קובץ JSON חדש עם תאריך ושעה; גיבויים קודמים נשמרים.</p>
+          <p><b>גיבוי תוכנית:</b> שומר עותק APK של הגרסה המותקנת. אם אותה גרסה כבר קיימת ותקינה בתיקייה, היא לא מועתקת שוב. תיקייה חדשה תקבל עותק גם אם הגרסה גובתה קודם במקום אחר.</p>
+          <p><b>Google Drive:</b> בחר את התיקייה פעם אחת בהגדרות. כל גיבוי מנסה לשמור בטלפון וגם בתיקייה הנוספת. כישלון ביעד אחד אינו מבטל ניסיון שמירה ביעד השני.</p>
+          <p><b>שחזור:</b> בחר קובץ JSON מהטלפון או מ־Drive ואשר את החלפת הנתונים. נתמכים גם הגיבויים הישנים של GS ו־HTML. כדי להתקין בטלפון חדש, מתקינים את ה־APK ואז משחזרים את קובץ הנתונים.</p>
+          <p><b>בחירת תיקיות:</b> אם הגישה פגה או שהתיקייה הועברה, לחץ „בחר / שנה תיקייה”. בטלפון חדש בוחרים תיקיות מחדש. אם Android לא מאפשר לבחור את Download הראשית, בחר תיקיית משנה או השתמש בברירת המחדל.</p>
+        </details>
+      </div>
+      <div class="card"><div class="label">סוג אפליקציה</div><div>APK היברידי</div></div>
+      <div class="card"><div class="label">מספר גרסה</div><div>Work 3</div></div>
+      <div class="card"><div class="label">תאריך עדכון</div><div>20/10/2026</div></div>
+      <div class="card"><div class="label">מקור הנתונים</div><div>אחסון מקומי במכשיר; גיבוי לטלפון ולתיקייה הנוספת שבחרת</div></div>
+      <div class="card"><div class="label">תאימות שחזור</div><div>גיבויי פנקס חדש, GS ו־HTML</div></div>
+      <div class="card"><div class="label">מפתח אחסון</div><div style="overflow-wrap:anywhere">home_budget_pro_v3_categories</div></div>
+      <div class="card"><div class="label">עיקרי העדכון</div><div>גיבוי נתונים ותוכנית בנפרד; תיקיות שמורות; שמירת גיבויים קודמים; תוצאה נפרדת לכל יעד; שחזור תואם וגודל תצוגה. נשמרו „לחודשים הבאים”, הקטגוריות והדוחות.</div></div>
     </div>
   </div>
 </section>
@@ -830,6 +856,19 @@ h1{font-size:22px!important}
 </div>
 
 </main>
+<div id="backupMenu" class="report-modal" role="dialog" aria-modal="true" aria-label="גיבוי ושחזור">
+  <div class="report-dialog" style="max-width:440px">
+    <h2>גיבוי ושחזור</h2>
+    <div class="backup-menu-actions">
+      <button type="button" data-backup-action onclick="backup()">💾 גיבוי נתונים</button>
+      <button type="button" data-backup-action onclick="backupProgram()">📦 גיבוי תוכנית APK</button>
+      <button type="button" onclick="requestRestore()">📥 שחזור נתונים</button>
+      <button type="button" onclick="closeBackupMenu();view('settings')">⚙️ הגדרות ותיקיות גיבוי</button>
+      <button type="button" onclick="closeBackupMenu()">סגירה</button>
+    </div>
+  </div>
+</div>
+<div id="backupLiveStatus" role="status" aria-live="polite" style="text-align:center;font-size:14px;padding:4px 12px"></div>
 <script>
 let selectedYear=0;
 let selectedMonth=0;
@@ -1005,8 +1044,8 @@ function saveThen(callback){
 }
 
 const APP_TYPE='HTML';
-const APP_VERSION='56';
-const APP_UPDATE_DATE='29/09/2026';
+const APP_VERSION='Work 3';
+const APP_UPDATE_DATE='20/10/2026';
 const DEFAULT_EXPENSE_CATEGORY='דברי מכולת';
 
 function money(x){return new Intl.NumberFormat('he-IL',{style:'currency',currency:'ILS',maximumFractionDigits:0}).format(x||0)}
@@ -1079,52 +1118,129 @@ function applyDisplayScaleSetting(){
 }
 
 
+let backupInProgress=false;
+let pendingBackupKind='data';
+let lastNativeBackupState=null;
+
+function dateLabel(raw){
+  if(!raw)return 'עדיין לא בוצע';
+  const t=new Date(raw);
+  return Number.isNaN(t.getTime())?'עדיין לא בוצע':t.toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short'});
+}
+function backupBusyUi(busy,message=''){
+  backupInProgress=busy;
+  document.querySelectorAll('[data-backup-action]').forEach(el=>el.disabled=busy);
+  const el=document.getElementById('backupOperationStatus');
+  if(el)el.textContent=message||(busy?'הגיבוי מתבצע…':'');
+}
 function syncCloudBackupSetting(){
-  const el=document.getElementById('cloudBackupStatus');
-  if(!el)return;
-
-  let selected=false;
+  if(!window.AndroidFolders||typeof window.AndroidFolders.getBackupState!=='function')return;
   try{
-    if(window.AndroidCloud && typeof window.AndroidCloud.hasCloudFolder==='function'){
-      selected=!!window.AndroidCloud.hasCloudFolder();
+    const state=JSON.parse(window.AndroidFolders.getBackupState());
+    lastNativeBackupState=state;
+    for(const kind of ['local','cloud']){
+      const x=state[kind]||{};
+      const el=document.getElementById(kind+'BackupStatus');
+      if(el)el.textContent=(x.name||'לא נבחרה תיקייה')+(x.configured&&!x.available?' — יש לבחור מחדש כדי לחדש גישה':'');
+      const when=document.getElementById(kind+'BackupDate');
+      if(when)when.textContent='נתונים: '+dateLabel(x.lastSuccessAt)+' | תוכנית: '+dateLabel(x.lastProgramAt);
     }
-  }catch(err){
-    console.error(err);
-  }
-
-  el.textContent=selected
-    ? 'תיקיית ענן נבחרה — הגיבוי הכפול פעיל'
-    : 'לא נבחרה תיקיית ענן';
+    backupBusyUi(!!state.running,state.running?'הגיבוי מתבצע…':'');
+    if(state.lastResult)renderBackupResult(JSON.parse(state.lastResult),false);
+    if(state.lastDataResult){
+      const r=JSON.parse(state.lastDataResult);
+      if(r.anySuccess&&Date.parse(r.createdAt)>Date.parse(d.lastBackupAt||'1970-01-01')){
+        d.lastBackupAt=r.createdAt;save();updateBackupStatus();
+      }
+    }
+  }catch(err){console.error(err);}
 }
-
+function chooseLocalBackupFolder(){
+  if(backupInProgress)return;
+  if(window.AndroidFolders)window.AndroidFolders.chooseLocalFolder();
+  else alert('בחירת תיקיות זמינה בגרסת ה־APK');
+}
+function clearLocalBackupFolder(){
+  if(!backupInProgress&&window.AndroidFolders){window.AndroidFolders.clearLocalFolder();syncCloudBackupSetting();}
+}
 function chooseCloudBackupFolder(){
-  if(window.AndroidCloud && typeof window.AndroidCloud.chooseCloudFolder==='function'){
-    try{
-      window.AndroidCloud.chooseCloudFolder();
-      return;
-    }catch(err){
-      console.error(err);
-    }
-  }
-  alert('אפשרות זו זמינה בגרסת ה-APK ההיברידית');
+  if(backupInProgress)return;
+  if(window.AndroidFolders)window.AndroidFolders.chooseCloudFolder();
+  else if(window.AndroidCloud)window.AndroidCloud.chooseCloudFolder();
 }
-
 function clearCloudBackupFolder(){
-  if(window.AndroidCloud && typeof window.AndroidCloud.clearCloudFolder==='function'){
-    try{
-      window.AndroidCloud.clearCloudFolder();
-      syncCloudBackupSetting();
-      alert('בחירת תיקיית הענן בוטלה');
-      return;
-    }catch(err){
-      console.error(err);
-    }
-  }
-  alert('לא ניתן לבטל את בחירת תיקיית הענן');
-}
-
-window.cloudFolderSelectedFromAndroid=function(){
+  if(backupInProgress)return;
+  if(window.AndroidFolders)window.AndroidFolders.clearCloudFolder();
+  else if(window.AndroidCloud)window.AndroidCloud.clearCloudFolder();
   syncCloudBackupSetting();
+}
+window.backupFoldersChangedFromAndroid=syncCloudBackupSetting;
+window.cloudFolderSelectedFromAndroid=syncCloudBackupSetting;
+function openBackupMenu(){document.getElementById('backupMenu').classList.add('open');syncCloudBackupSetting();}
+function closeBackupMenu(){document.getElementById('backupMenu').classList.remove('open');}
+function requestRestore(){
+  closeBackupMenu();
+  if(backupInProgress){alert('יש להמתין לסיום הגיבוי');return;}
+  if(window.AndroidRestore)window.AndroidRestore.pickRestoreFile();
+  else document.getElementById('restore').click();
+}
+function backup(){
+  if(backupInProgress)return;
+  closeBackupMenu();
+  const now=new Date();
+  const pad=(n,width=2)=>String(n).padStart(width,'0');
+  const stamp=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}-${pad(now.getMilliseconds(),3)}`;
+  let scale=80;
+  try{if(window.AndroidDisplay)scale=Number(window.AndroidDisplay.getDisplayScale());}catch(err){console.error(err);}
+  const payload={...d,lastBackupAt:now.toISOString(),_backupCreatedAt:now.toISOString(),_backupSource:'PINCAS_WORK',_backupAppVersion:'Work 3',_pincasSettings:{displayScale:scale}};
+  const json=JSON.stringify(payload,null,2);
+  const name=`גיבוי_פנקס_חדש_${stamp}.json`;
+  pendingBackupKind='data';
+  backupBusyUi(true,'גיבוי הנתונים מתבצע…');
+  try{
+    if(window.AndroidBackup&&typeof window.AndroidBackup.saveBackupAsync==='function'){
+      if(!window.AndroidBackup.saveBackupAsync(json,name))backupBusyUi(false,'כבר מתבצע גיבוי. המתן לסיום.');
+      return;
+    }
+    const blob=new Blob([json],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500);
+    backupBusyUi(false,'הקובץ הועבר להורדה בדפדפן. יש לוודא שההורדה הסתיימה.');
+  }catch(err){console.error(err);backupBusyUi(false,'הגיבוי לא הושלם. נסה שוב.');alert('הגיבוי לא הושלם. הנתונים נשארו באפליקציה.');}
+}
+function backupProgram(){
+  if(backupInProgress)return;
+  closeBackupMenu();pendingBackupKind='program';
+  if(!window.AndroidBackup||typeof window.AndroidBackup.backupProgramAsync!=='function'){alert('גיבוי תוכנית זמין בגרסת ה־APK');return;}
+  backupBusyUi(true,'גיבוי תוכנית ה־APK מתבצע…');
+  try{if(!window.AndroidBackup.backupProgramAsync())backupBusyUi(false,'כבר מתבצע גיבוי. המתן לסיום.');}
+  catch(err){console.error(err);backupBusyUi(false,'גיבוי התוכנית לא הושלם.');}
+}
+function renderBackupResult(r,announce){
+  const kind=r.kind==='program'?'תוכנית':'נתונים';
+  const describe=(x,label)=>!x||!x.configured?label+': לא הוגדרה תיקייה':
+    x.ok?label+': '+(x.skipped?'הגרסה כבר מגובה — נבדקה ולא הועתקה שוב':'נשמר ונבדק')+' ('+x.name+')':label+': השמירה נכשלה. '+(x.error||'יש לבדוק את התיקייה והגישה.');
+  const lines=[r.createdAt?'גיבוי '+kind+' — '+dateLabel(r.createdAt):'גיבוי '+kind,describe(r.local,'טלפון'),describe(r.cloud,'תיקייה נוספת / Drive')];
+  if(r.error)lines.push(r.error);
+  if(r.fileName)lines.push('קובץ: '+r.fileName);
+  const text=lines.join('\n');
+  const details=document.getElementById('backupResultDetails');if(details)details.textContent=text;
+  const live=document.getElementById('backupLiveStatus');if(live)live.textContent=r.anySuccess?(r.allConfiguredSucceeded?'גיבוי '+kind+' הושלם':'גיבוי '+kind+' הושלם חלקית'):'גיבוי '+kind+' נכשל';
+  if(announce){
+    if(r.anySuccess&&r.allConfiguredSucceeded){
+      const title=r.cloud&&r.cloud.configured?'✅ גיבוי '+kind+' נשמר בטלפון ובתיקייה הנוספת':'✅ גיבוי '+kind+' בטלפון בלבד — לא הוגדר עותק ענן';
+      showBackupToast(new Date(r.createdAt),title);
+    }else alert(text);
+  }
+  return text;
+}
+window.backupFinishedFromAndroid=function(raw){
+  try{
+    const r=JSON.parse(raw);
+    backupBusyUi(false);
+    if(r.kind==='data'&&r.anySuccess){d.lastBackupAt=r.createdAt;save();updateBackupStatus();}
+    syncCloudBackupSetting();
+    renderBackupResult(r,true);
+  }catch(err){console.error(err);backupBusyUi(false,'לא ניתן לקרוא את תוצאת הגיבוי. בדוק את הקבצים בתיקיות לפני ניסיון נוסף.');}
 };
 
 function fillCats(){
@@ -1855,55 +1971,7 @@ function printGeneratedReport(reportHtml){
 }
 window.addEventListener('afterprint',()=>document.body.classList.remove('printing-report'));
 
-function backup(){
-  const now=new Date();
-  const pad=n=>String(n).padStart(2,'0');
-  const stamp=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}`;
-  const backupData={...d,_backupCreatedAt:now.toISOString(),_backupSource:'HTML',_backupAppVersion:APP_VERSION};
-  const json=JSON.stringify(backupData,null,2);
-  const fileName=`גיבוי כרטסת הוצאות_${stamp}.json`;
-
-  let result='FAILED';
-
-  if(window.AndroidBackup && typeof window.AndroidBackup.saveBackup==='function'){
-    try{
-      result=String(window.AndroidBackup.saveBackup(json,fileName) || 'FAILED');
-    }catch(err){
-      console.error(err);
-      result='FAILED';
-    }
-  }else{
-    try{
-      const b=new Blob([json],{type:'application/json'});
-      const a=document.createElement('a');
-      a.href=URL.createObjectURL(b);
-      a.download=fileName;
-      a.click();
-      setTimeout(()=>URL.revokeObjectURL(a.href),500);
-      result='LOCAL_ONLY_NO_CLOUD';
-    }catch(err){
-      console.error(err);
-      result='FAILED';
-    }
-  }
-
-  if(result==='LOCAL_FAILED' || result==='FAILED'){
-    alert('לא ניתן היה ליצור את קובץ הגיבוי. הנתונים עצמם נשארו שמורים באפליקציה.');
-    return;
-  }
-
-  d.lastBackupAt=now.toISOString();
-  save();
-  updateBackupStatus();
-  showBackupToast(now);
-
-  if(result==='LOCAL_ONLY_NO_CLOUD'){
-    alert('הגיבוי נשמר בטלפון. כדי לשמור גם בענן, בחר פעם אחת תיקיית Google Drive במסך ההגדרות.');
-  }else if(result==='LOCAL_ONLY_CLOUD_FAILED'){
-    alert('הגיבוי נשמר בטלפון, אך הגיבוי לענן לא הצליח.');
-  }
-}
-function showBackupToast(dt){
+function showBackupToast(dt,title="✅ הגיבוי בוצע בהצלחה"){
   let el=document.getElementById('backupToast');
   if(!el){
     el=document.createElement('div');
@@ -1911,7 +1979,7 @@ function showBackupToast(dt){
     el.className='backup-toast';
     document.body.appendChild(el);
   }
-  el.innerHTML=`<div class="backup-toast-title">✅ הגיבוי בוצע בהצלחה</div><div>${dt.toLocaleDateString('he-IL')} בשעה ${dt.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}</div>`;
+  el.innerHTML=`<div class="backup-toast-title">${esc(title)}</div><div>${dt.toLocaleDateString('he-IL')} בשעה ${dt.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}</div>`;
   el.classList.add('show');
   clearTimeout(window._backupToastTimer);
   window._backupToastTimer=setTimeout(()=>el.classList.remove('show'),3500);
@@ -1925,6 +1993,10 @@ function updateBackupStatus(){
   el.textContent=`גיבוי אחרון: ${dt.toLocaleDateString('he-IL')} ${dt.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}`;
 }
 
+function confirmRestore(x){
+  if(!x||!Array.isArray(x.tx)||!Array.isArray(x.incomeCats)||!Array.isArray(x.expenseCats))throw new Error('invalid backup');
+  return confirm('לשחזר '+x.tx.length+' תנועות מהגיבוי? הנתונים הנוכחיים יוחלפו בנתוני הקובץ.');
+}
 function applyRestoreObject(x){
   const validBackup=x && typeof x==='object' &&
     Array.isArray(x.tx) && Array.isArray(x.incomeCats) && Array.isArray(x.expenseCats);
@@ -1948,9 +2020,14 @@ function applyRestoreObject(x){
   renderCats();
   renderReport();
   view('home');
+  const scale=Number(restored._pincasSettings?.displayScale);
+  if(Number.isFinite(scale)&&scale>=60&&scale<=120&&window.AndroidDisplay){
+    setTimeout(()=>window.AndroidDisplay.setDisplayScale(Math.round(scale)),100);
+  }
 }
 
 function openRestorePicker(e){
+  if(backupInProgress){if(e){e.preventDefault();e.stopPropagation();}alert('יש להמתין לסיום הגיבוי');return false;}
   if(window.AndroidRestore && typeof window.AndroidRestore.pickRestoreFile==='function'){
     if(e){e.preventDefault();e.stopPropagation();}
     try{
@@ -1966,6 +2043,7 @@ function openRestorePicker(e){
 window.restoreFromAndroid=function(jsonText){
   try{
     const x=JSON.parse(jsonText);
+    if(!confirmRestore(x))return;
     applyRestoreObject(x);
     alert('השחזור הושלם בהצלחה מגיבוי GS/HTML');
   }catch(err){
@@ -1981,6 +2059,7 @@ function restoreData(e){
   r.onload=()=>{
     try{
       const x=JSON.parse(r.result);
+      if(!confirmRestore(x)){e.target.value='';return;}
       applyRestoreObject(x);
       e.target.value='';
       alert('השחזור הושלם בהצלחה מגיבוי GS/HTML');

@@ -29,19 +29,27 @@ jobs:
       - name: Check backup compatibility
         working-directory: pincas-work
         run: node tests/restore-smoke.cjs
+      - name: Install browser for phone layout checks
+        working-directory: pincas-work
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.1
+          npx playwright install --with-deps chromium
+      - name: Check phone screens and backup flow
+        working-directory: pincas-work
+        run: node tests/backup-ui.cjs
       - name: Compile release
         working-directory: pincas-work
-        run: gradle --no-daemon assembleRelease
+        run: gradle --no-daemon testReleaseUnitTest assembleRelease
       - name: Collect unsigned APK and verification tools
         run: |
           mkdir -p pincas-output
-          cp pincas-work/app/build/outputs/apk/release/app-release-unsigned.apk pincas-output/PincasWork_V2_unsigned.apk
+          cp pincas-work/app/build/outputs/apk/release/app-release-unsigned.apk pincas-output/PincasWork_V3_unsigned.apk
           cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" pincas-output/apksigner.jar
           cp pincas-work/app/build/outputs/apk/release/output-metadata.json pincas-output/
           git rev-parse HEAD > pincas-output/SOURCE_COMMIT.txt
           sha256sum pincas-output/*.apk > pincas-output/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: PincasWork-V2-unsigned
+          name: PincasWork-V3-unsigned
           path: pincas-output/
           retention-days: 14

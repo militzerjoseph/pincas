@@ -1,0 +1,61 @@
+const {chromium}=require('playwright');
+const {pathToFileURL}=require('node:url');
+const path=require('node:path'),fs=require('node:fs'),assert=require('node:assert/strict');
+(async()=>{
+const browser=await chromium.launch({headless:true});
+const page=await browser.newPage({viewport:{width:412,height:915}});
+const errors=[];const dialogs=[];page.on('pageerror',e=>errors.push(e.message));
+page.on('dialog',async d=>{dialogs.push(d.message());await d.accept()});
+await page.addInitScript(()=>{
+ window.__displayScale=83;window.__testMode='partial';
+ const state=window.__testState={running:false,local:{configured:false,available:true,name:'Download/גיבויים/פנקס חדש'},cloud:{configured:false,available:false,name:'לא נבחרה תיקייה'},lastResult:'',lastDataResult:''};
+ window.AndroidDisplay={getDisplayScale:()=>window.__displayScale,setDisplayScale:(n)=>{window.__displayScale=n;return true}};
+ window.AndroidFolders={getBackupState:()=>JSON.stringify(state),chooseLocalFolder:()=>{state.local={configured:true,available:true,name:'גיבויים / פנקס חדש'};window.backupFoldersChangedFromAndroid()},chooseCloudFolder:()=>{state.cloud={configured:true,available:true,name:'גיבויים מהטלפון / פנקס חדש'};window.backupFoldersChangedFromAndroid()},clearLocalFolder:()=>{state.local={configured:false,available:true,name:'Download/גיבויים/פנקס חדש'};window.backupFoldersChangedFromAndroid()},clearCloudFolder:()=>{state.cloud={configured:false,available:false,name:'לא נבחרה תיקייה'};window.backupFoldersChangedFromAndroid()}};
+ function finish(kind){
+  state.running=true;
+  setTimeout(()=>{
+   const partial=window.__testMode==='partial';
+   const r={kind,createdAt:new Date().toISOString(),fileName:kind==='data'?'גיבוי_פנקס_חדש_test.json':'פנקס_חדש_v3.apk',local:{...state.local,configured:true,ok:true,skipped:kind==='program'},cloud:{...state.cloud,configured:true,ok:!partial,skipped:kind==='program',error:partial?'בדיקת כישלון ענן':''},anySuccess:true,allConfiguredSucceeded:!partial};
+   state.running=false;state.lastResult=JSON.stringify(r);if(kind==='data')state.lastDataResult=JSON.stringify(r);
+   window.backupFinishedFromAndroid(JSON.stringify(r));
+  },50);return true;
+ }
+ window.AndroidBackup={saveBackupAsync:(json,name)=>{window.__capturedBackup=JSON.parse(json);window.__capturedName=name;return finish('data')},backupProgramAsync:()=>finish('program')};
+ window.AndroidRestore={pickRestoreFile:()=>{window.__restoreRequested=true}};
+});
+await page.goto(pathToFileURL(path.resolve('app/src/main/assets/index.html')).href);
+assert.equal(await page.title(),'פנקס הכנסות והוצאות');
+await page.getByRole('button',{name:'⚙️ הגדרות',exact:true}).click();
+await page.getByRole('button',{name:'בחר / שנה תיקייה בטלפון',exact:true}).click();
+await page.getByRole('button',{name:'בחר / שנה תיקיית Google Drive',exact:true}).click();
+assert.match(await page.locator('#cloudBackupStatus').innerText(),/גיבויים מהטלפון/);
+assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'settings must fit the phone width');
+await page.getByRole('button',{name:'💾 גיבוי נתונים',exact:true}).click();
+await page.waitForFunction(()=>!backupInProgress&&window.__capturedBackup);
+assert.equal(await page.evaluate(()=>window.__capturedBackup._pincasSettings.displayScale),83);
+assert.match(await page.locator('#backupResultDetails').innerText(),/השמירה נכשלה/);
+assert.match(await page.locator('#backupLiveStatus').innerText(),/חלקית/);
+const name1=await page.evaluate(()=>window.__capturedName);
+await page.evaluate(()=>window.__testMode='success');
+await page.getByRole('button',{name:'💾 גיבוי נתונים',exact:true}).click();
+await page.waitForFunction(()=>!backupInProgress&&window.__testState.lastResult.includes('"allConfiguredSucceeded":true'));
+const name2=await page.evaluate(()=>window.__capturedName);assert.notEqual(name1,name2,'each data backup needs a fresh timestamp');
+assert.match(await page.locator('#backupResultDetails').innerText(),/נשמר ונבדק/);
+await page.getByRole('button',{name:'📦 גיבוי תוכנית APK',exact:true}).click();
+await page.waitForFunction(()=>!backupInProgress&&window.__testState.lastResult.includes('"kind":"program"'));
+assert.match(await page.locator('#backupResultDetails').innerText(),/לא הועתקה שוב/);
+fs.mkdirSync('../pincas-output',{recursive:true});await page.screenshot({path:'../pincas-output/settings-preview.png',fullPage:true});
+const sample={incomeCats:[{name:'משכורת בעל',budget:0}],expenseCats:[{name:'דברי מכולת',budget:0}],tx:[{id:1,type:'income',date:'2025-12-01',category:'משכורת בעל',amount:1000,desc:'בדיקה'},{id:2,type:'expense',date:'2025-12-02',category:'דברי מכולת',amount:100,desc:'בדיקה'}],selectedYear:2025,selectedMonth:12};
+await page.evaluate(x=>window.restoreFromAndroid(JSON.stringify(x)),sample);
+assert.deepEqual(await page.evaluate(()=>[selectedYear,selectedMonth,d.tx.length,totals('2025-12').income-totals('2025-12').expense]),[2025,12,2,900]);
+await page.evaluate(x=>window.restoreFromAndroid(JSON.stringify({...x,_pincasSettings:{displayScale:95}})),sample);
+await page.waitForFunction(()=>window.__displayScale===95);
+await page.evaluate(()=>window.restoreFromAndroid('{broken json'));
+assert.equal(await page.evaluate(()=>d.tx.length),2,'invalid restore must keep current data');
+await page.getByRole('button',{name:'💾 גיבוי',exact:true}).click();
+assert.equal(await page.locator('#backupMenu').evaluate(e=>e.classList.contains('open')),true);
+await page.getByRole('button',{name:'סגירה',exact:true}).click();
+assert.deepEqual(errors,[]);
+console.log('PASS: phone settings layout; folder selections; partial backup; full backup; unique names; program skip; old and new restores; scale restore; invalid restore; menu.');
+await browser.close();
+})().catch(e=>{console.error(e);process.exit(1)});
