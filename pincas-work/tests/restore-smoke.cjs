@@ -1,0 +1,16 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(process.argv[2]||'app/src/main/assets/index.html','utf8');
+const stored={};let failSave=false;
+const c={console:{log(){},error(){}},Intl,Date,setTimeout,clearTimeout,alert(){},localStorage:{getItem(k){return stored[k]||null},setItem(k,v){if(failSave)throw Error('storage full');stored[k]=v}},document:{addEventListener(){},getElementById(){return null}},window:{addEventListener(){}}};
+vm.createContext(c);vm.runInContext(html.match(/<script\b[^>]*>([\s\S]*?)<\/script>/i)[1],c);
+vm.runInContext("fill=fillCats=syncManualInputs=refreshSelectedPeriod=updateBackupStatus=renderCats=renderReport=view=()=>{}",c);
+const backup={incomeCats:[{name:'Salary',budget:0}],expenseCats:[{name:'Groceries',budget:0}],tx:[{id:1,type:'income',date:'2025-12-01',category:'Salary',amount:'1000'},{id:2,type:'expense',date:'2025-12-02',category:'Groceries',amount:'100',recurring:true}],selectedYear:2025,selectedMonth:12};
+c.backup=backup;vm.runInContext('selectedYear=2026;selectedMonth=8;applyRestoreObject(backup)',c);
+assert.equal(vm.runInContext('selectedYear',c),2025);assert.equal(vm.runInContext('selectedMonth',c),12);
+const data=JSON.parse(stored.home_budget_pro_v3_categories);assert.equal(data.selectedMonth,12);assert.equal(data.selectedYear,2025);assert.equal(data.tx.length,2);assert.equal(data.tx[1].recurring,true);
+assert.equal(vm.runInContext("totals('2025-12').income-totals('2025-12').expense",c),900);
+assert.throws(()=>vm.runInContext('applyRestoreObject({tx:[]})',c),/invalid backup/);
+failSave=true;c.backup={...backup,selectedYear:2024,selectedMonth:3,tx:[]};
+assert.throws(()=>vm.runInContext('applyRestoreObject(backup)',c),/save failed/);
+assert.equal(vm.runInContext('selectedYear',c),2025);assert.equal(vm.runInContext('d.tx.length',c),2);
+console.log('PASS: restore period, persistence, totals, recurring flag, invalid backup and storage failure rollback');

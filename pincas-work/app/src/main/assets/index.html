@@ -1931,11 +1931,14 @@ function applyRestoreObject(x){
   if(!validBackup) throw new Error('invalid backup');
 
   const restored=normalizeData(x);
+  const previousData=d,previousYear=selectedYear,previousMonth=selectedMonth;
+  const y=Number(restored.selectedYear||0),m=Number(restored.selectedMonth||0);
   d=restored;
-  if(!save()) throw new Error('save failed');
-
-  const y=Number(d.selectedYear||0),m=Number(d.selectedMonth||0);
   if(y>0&&m>=1&&m<=12){selectedYear=y;selectedMonth=m;}
+  if(!save()){
+    d=previousData;selectedYear=previousYear;selectedMonth=previousMonth;
+    throw new Error('save failed');
+  }
 
   fill();
   fillCats();

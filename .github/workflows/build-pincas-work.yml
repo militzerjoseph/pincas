@@ -26,6 +26,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
+      - name: Check backup compatibility
+        working-directory: pincas-work
+        run: node tests/restore-smoke.cjs
       - name: Compile release
         working-directory: pincas-work
         run: gradle --no-daemon assembleRelease
