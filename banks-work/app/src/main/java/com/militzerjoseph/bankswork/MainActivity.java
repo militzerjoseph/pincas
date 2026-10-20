@@ -120,10 +120,10 @@ public class MainActivity extends Activity {
     }
     private void exportCopy(String json,boolean apk){
         if(busy){message("גיבוי כבר מתבצע");return;}
-        if(apk&&prefs.getInt("apk_export",0)>=101){message("עותק APK לגרסה זו כבר נשמר דרך בוחר הקבצים");return;}
+        if(apk&&prefs.getInt("apk_export",0)>=102){message("עותק APK לגרסה זו כבר נשמר דרך בוחר הקבצים");return;}
         exportJson=json;exportApk=apk;
         Intent in=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(apk?"application/vnd.android.package-archive":"application/json");
-        String name=apk?"Banks_Work_V101.apk":"גיבוי_בנקים_"+new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss",Locale.US).format(new Date())+".json";
+        String name=apk?"Banks_Work_V102.apk":"גיבוי_בנקים_"+new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss",Locale.US).format(new Date())+".json";
         in.putExtra(Intent.EXTRA_TITLE,name);
         try{startActivityForResult(in,EXPORT);}catch(Exception e){exportJson=null;exportApk=false;message("לא ניתן לפתוח חלון שמירה");}
     }
@@ -133,12 +133,12 @@ public class MainActivity extends Activity {
         io.execute(()->{
             boolean local=false,cloud=false;String error="";String folder=apk?"APK":"נתונים";
             String stamp=new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss-SSS",Locale.US).format(new Date());
-            String name=apk?"Banks_Work_V101.apk":"גיבוי_בנקים_"+stamp+".json";
+            String name=apk?"Banks_Work_V102.apk":"גיבוי_בנקים_"+stamp+".json";
             File source=apk?new File(getApplicationInfo().sourceDir):null;byte[] bytes=apk?null:json.getBytes(StandardCharsets.UTF_8);
-            try{if(apk&&prefs.getInt("apk_local",0)>=101&&hasLocal(name,folder)){local=true;}else{writeLocal(name,folder,apk?"application/vnd.android.package-archive":"application/json",source,bytes);local=true;if(apk)prefs.edit().putInt("apk_local",101).apply();}}catch(Exception e){error="שמירה בטלפון נכשלה";}
+            try{if(apk&&prefs.getInt("apk_local",0)>=102&&hasLocal(name,folder)){local=true;}else{writeLocal(name,folder,apk?"application/vnd.android.package-archive":"application/json",source,bytes);local=true;if(apk)prefs.edit().putInt("apk_local",102).apply();}}catch(Exception e){error="שמירה בטלפון נכשלה";}
             String tree=exportUri!=null?"export":prefs.getString("cloud","");
             if(!tree.isEmpty())try{
-                if(exportUri!=null){writeBytes(exportUri,source,bytes);if(apk)prefs.edit().putInt("apk_export",101).apply();cloud=true;}else{
+                if(exportUri!=null){writeBytes(exportUri,source,bytes);if(apk)prefs.edit().putInt("apk_export",102).apply();cloud=true;}else{
                 Uri root=Uri.parse(tree);Uri doc=DocumentsContract.buildDocumentUriUsingTree(root,DocumentsContract.getTreeDocumentId(root));
                 Uri app=childDir(root,doc,"בנקים");Uri dest=childDir(root,app,folder);
                 Uri existing=apk?findChild(root,dest,name):null;

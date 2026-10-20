@@ -1,9 +1,9 @@
-# בנקים — גרסה 101
+# בנקים — גרסה 102
 
 Android WebView app rebuilt from the supplied `banks_uniform_ready_v100.apk` HTML.
 
 * Application ID: `com.militzerjoseph.bankswork` (installs alongside the original app).
-* Launcher label: `בנקים חדש`; in-app title: `בנקים`.
+* Launcher label: `בנקים`; in-app title: `בנקים`.
 * Android 10 or newer. Java 17, Gradle 8.9, Android SDK 35.
 * The approved blue/gold bank illustration is the default icon; classic text/icon controls remain available.
 * Data format remains `app: בנקים, version: 1`, with optional `appVersion` and `launcherIcon`.

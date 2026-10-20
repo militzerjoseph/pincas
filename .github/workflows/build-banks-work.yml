@@ -1,4 +1,4 @@
-name: Build Banks Work V101
+name: Build Banks Work V102
 on:
   workflow_dispatch:
   push:
@@ -34,15 +34,15 @@ jobs:
       - name: Collect APK and tools
         run: |
           mkdir -p banks-output/tools
-          cp banks-work/app/build/outputs/apk/release/app-release-unsigned.apk banks-output/Banks_Work_V101_unsigned.apk
+          cp banks-work/app/build/outputs/apk/release/app-release-unsigned.apk banks-output/Banks_Work_V102_unsigned.apk
           cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" banks-output/tools/
           cp "$ANDROID_HOME/build-tools/35.0.0/zipalign" banks-output/tools/
           cp "$ANDROID_HOME/build-tools/35.0.0/aapt" banks-output/tools/
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging banks-output/Banks_Work_V101_unsigned.apk | head -5
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging banks-output/Banks_Work_V102_unsigned.apk | head -5
           cd banks-output
-          sha256sum Banks_Work_V101_unsigned.apk > SHA256SUMS
+          sha256sum Banks_Work_V102_unsigned.apk > SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
-          name: banks-work-v101-build
+          name: banks-work-v102-build
           path: banks-output/
           if-no-files-found: error
