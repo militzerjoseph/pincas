@@ -1,0 +1,16 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.militzerjoseph.bankswork'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.militzerjoseph.bankswork'
+        minSdk 29
+        targetSdk 35
+        versionCode 101
+        versionName '101.0'
+    }
+}
