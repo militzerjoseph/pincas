@@ -42,19 +42,20 @@ jobs:
         run: |
           node tests/bank-reconciliation.cjs
           node tests/bank-ui.cjs
+          node tests/large-amounts.cjs
       - name: Compile release
         working-directory: pincas-work
         run: gradle --no-daemon testReleaseUnitTest assembleRelease
       - name: Collect unsigned APK and verification tools
         run: |
           mkdir -p pincas-output
-          cp pincas-work/app/build/outputs/apk/release/app-release-unsigned.apk pincas-output/PincasWork_V4_unsigned.apk
+          cp pincas-work/app/build/outputs/apk/release/app-release-unsigned.apk pincas-output/PincasWork_V5_unsigned.apk
           cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" pincas-output/apksigner.jar
           cp pincas-work/app/build/outputs/apk/release/output-metadata.json pincas-output/
           git rev-parse HEAD > pincas-output/SOURCE_COMMIT.txt
           sha256sum pincas-output/*.apk > pincas-output/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: PincasWork-V4-unsigned
+          name: PincasWork-V5-unsigned
           path: pincas-output/
           retention-days: 14

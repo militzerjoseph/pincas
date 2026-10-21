@@ -599,7 +599,7 @@ button:disabled{opacity:.55;cursor:wait}
 .bank-category-row{background:#fff2c9}
 .report-scroll td,.report-scroll th{font-variant-numeric:tabular-nums}
 .report-scroll .cat{display:table-cell;grid-template-columns:none}
-.bank-comparison td{white-space:nowrap}
+.bank-comparison td,.bank-category-row td:not(:first-child){white-space:nowrap}
 .difference-plus{color:#b42318;font-weight:bold}
 .difference-minus{color:#087443;font-weight:bold}
 .report-scroll bdi{white-space:nowrap}
@@ -770,7 +770,7 @@ button:disabled{opacity:.55;cursor:wait}
         </details>
       </div>
       <div class="card"><div class="label">סוג אפליקציה</div><div>APK היברידי</div></div>
-      <div class="card"><div class="label">מספר גרסה</div><div>Work 4</div></div>
+      <div class="card"><div class="label">מספר גרסה</div><div>Work 5</div></div>
       <div class="card"><div class="label">תאריך עדכון</div><div>21/10/2026</div></div>
       <div class="card"><div class="label">מקור הנתונים</div><div>אחסון מקומי במכשיר; גיבוי לטלפון ולתיקייה הנוספת שבחרת</div></div>
       <div class="card"><div class="label">תאימות שחזור</div><div>גיבויי פנקס חדש, GS ו־HTML</div></div>
@@ -1058,11 +1058,11 @@ function saveThen(callback){
 }
 
 const APP_TYPE='HTML';
-const APP_VERSION='Work 4';
+const APP_VERSION='Work 5';
 const APP_UPDATE_DATE='21/10/2026';
 const DEFAULT_EXPENSE_CATEGORY='דברי מכולת';
 
-function money(x){return new Intl.NumberFormat('he-IL',{style:'currency',currency:'ILS',maximumFractionDigits:2}).format(x||0)}
+function money(x){return new Intl.NumberFormat('he-IL',{style:'currency',currency:'ILS',minimumFractionDigits:0,maximumFractionDigits:2}).format(x||0)}
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function months(){let a=[],now=new Date();for(let i=-240;i<=0;i++){let z=new Date(now.getFullYear(),now.getMonth()+i,1);a.push(z.toISOString().slice(0,7))}return a}
 function ml(m){let [y,x]=m.split('-');return new Date(+y,+x-1,1).toLocaleDateString('he-IL',{month:'long',year:'numeric'})}
@@ -1248,7 +1248,7 @@ function backup(){
   const stamp=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}-${pad(now.getMilliseconds(),3)}`;
   let scale=80;
   try{if(window.AndroidDisplay)scale=Number(window.AndroidDisplay.getDisplayScale());}catch(err){console.error(err);}
-  const payload={...d,lastBackupAt:now.toISOString(),_backupCreatedAt:now.toISOString(),_backupSource:'PINCAS_WORK',_backupAppVersion:'Work 4',_pincasSettings:{displayScale:scale}};
+  const payload={...d,lastBackupAt:now.toISOString(),_backupCreatedAt:now.toISOString(),_backupSource:'PINCAS_WORK',_backupAppVersion:'Work 5',_pincasSettings:{displayScale:scale}};
   const json=JSON.stringify(payload,null,2);
   const name=`גיבוי_פנקס_חדש_${stamp}.json`;
   pendingBackupKind='data';
@@ -1961,7 +1961,7 @@ function buildPrintDocument(reportHtml){
   .total-row{font-weight:800;background:#f5f5f5}.bank-category-row{background:#fff2c9}
   .difference-plus{color:#b42318;font-weight:bold}.difference-minus{color:#087443;font-weight:bold}
   .report-note{font-size:11px;line-height:1.5;margin:8px 0 14px}
-  bdi,.bank-comparison td:not(:first-child){white-space:nowrap}
+  bdi,.bank-comparison td:not(:first-child),.bank-category-row td:not(:first-child){white-space:nowrap}
   .report1-table td:nth-child(2){text-align:right}
   @page{size:A4 landscape;margin:8mm}
   </style></head><body>${reportHtml}</body></html>`;
