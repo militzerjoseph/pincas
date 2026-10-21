@@ -1694,7 +1694,7 @@ function renderMonthlyReport(){
       <td>${t.type==='income'?'הכנסה':'הוצאה'}</td>
       <td>${esc(t.category)}</td>
       <td>${esc(t.desc)} ${t.recurring?'🔄':''}</td>
-      <td class="${t.type==='income'?'good':'bad'}">${money(t.amount)}</td>
+      <td class="${t.type==='income'?'good':'bad'}">${isBankTx(t)&&cents(t.amount)===0?'לא הוזן':money(t.amount)}</td>
     </tr>`).join('') || '<tr><td colspan="5">אין תנועות בחודש זה.</td></tr>';
   }
 }
