@@ -43,6 +43,7 @@ for(let n=1;n<=6;n++){
   fs.mkdirSync('../pincas-output',{recursive:true});
   await proof.screenshot({path:`../pincas-output/bank-report-${n}.png`,fullPage:true});
   await proof.pdf({path:`../pincas-output/bank-report-${n}.pdf`,format:'A4',landscape:true,printBackground:true,preferCSSPageSize:true});
+  if(n===2){const pdf=fs.readFileSync('../pincas-output/bank-report-2.pdf').toString('latin1');assert.equal((pdf.match(/\/Type\s*\/Page\b/g)||[]).length,1,'30-category monthly print table should fit one landscape A4 page');}
   await proof.close();
  }
  await page.evaluate(()=>closePrintModal());
