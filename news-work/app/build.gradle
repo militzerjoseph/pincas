@@ -1,0 +1,17 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.militzerjoseph.newswork'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.militzerjoseph.newswork'
+        minSdk 29
+        targetSdk 35
+        versionCode 101
+        versionName '101.0'
+    }
+}
+
