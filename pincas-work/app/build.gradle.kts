@@ -9,8 +9,8 @@ android {
         applicationId = "com.militzerjoseph.pincaswork"
         minSdk = 29
         targetSdk = 34
-        versionCode = 3
-        versionName = "Work 3"
+        versionCode = 4
+        versionName = "Work 4"
     }
     buildTypes { release { isMinifyEnabled = false } }
     compileOptions {

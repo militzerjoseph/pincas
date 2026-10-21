@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
+    private val printViews = mutableListOf<WebView>()
     private val worker = Executors.newSingleThreadExecutor()
     private val backupBusy = AtomicBoolean(false)
     private val prefs by lazy { getSharedPreferences("pincas_hybrid_settings", MODE_PRIVATE) }
@@ -57,6 +58,7 @@ class MainActivity : AppCompatActivity() {
             displayZoomControls = false
             setSupportZoom(false)
         }
+        webView.addJavascriptInterface(PrintBridge(), "AndroidPrint")
         webView.addJavascriptInterface(BackupBridge(), "AndroidBackup")
         webView.addJavascriptInterface(RestoreBridge(), "AndroidRestore")
         webView.addJavascriptInterface(DisplayBridge(), "AndroidDisplay")
@@ -65,6 +67,34 @@ class MainActivity : AppCompatActivity() {
         webView.setInitialScale(prefs.getInt("display_scale_percent", 80).coerceIn(60, 120))
         if (savedInstanceState == null) webView.loadUrl("file:///android_asset/index.html")
         else if (webView.restoreState(savedInstanceState) == null) webView.loadUrl("file:///android_asset/index.html")
+    }
+
+    private inner class PrintBridge {
+        @JavascriptInterface fun printReport(html: String, landscape: Boolean) {
+            runOnUiThread {
+                if (isDestroyed || isFinishing) return@runOnUiThread
+                val reportView = WebView(this@MainActivity)
+                printViews.add(reportView)
+                reportView.settings.javaScriptEnabled = false
+                reportView.settings.allowFileAccess = false
+                reportView.settings.allowContentAccess = false
+                reportView.webViewClient = object : WebViewClient() {
+                    private var submitted = false
+                    override fun onPageFinished(view: WebView, url: String) {
+                        if (submitted || isDestroyed || isFinishing) return
+                        submitted = true
+                        try {
+                            val manager = getSystemService(android.content.Context.PRINT_SERVICE) as android.print.PrintManager
+                            val media = if (landscape) android.print.PrintAttributes.MediaSize.ISO_A4.asLandscape()
+                                else android.print.PrintAttributes.MediaSize.ISO_A4.asPortrait()
+                            val attrs = android.print.PrintAttributes.Builder().setMediaSize(media).build()
+                            manager.print("פנקס חדש — דוח", view.createPrintDocumentAdapter("דוח פנקס"), attrs)
+                        } catch (_: Exception) { toast("לא ניתן לפתוח את שירות ההדפסה במכשיר") }
+                    }
+                }
+                reportView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
+            }
+        }
     }
 
     private fun treeKey(kind: String) = if (kind == "cloud") "cloud_backup_tree_uri" else "local_backup_tree_uri"
@@ -381,7 +411,10 @@ class MainActivity : AppCompatActivity() {
     }
     override fun onDestroy() {
         worker.shutdown()
+        printViews.forEach { it.destroy() }
+        printViews.clear()
         webView.destroy()
         super.onDestroy()
     }
 }
+
