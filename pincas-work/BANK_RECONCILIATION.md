@@ -1,9 +1,19 @@
-# Work 4: bank expenditure reconciliation
+# Work 6: signed bank expense corrections
 
-Approved 2026-10-21 for Pincas Work (coin icon). Reserve expense category 30, הוצאות בבנק. Each monthly bank amount is separate from recorded category expenditure; it determines effective monthly expenses only when its sum in agorot is nonzero. Missing or zero amounts display לא הוזן and fall back to recorded expenses. Annual and multi-year totals aggregate the effective choice month by month. Category rows remain recorded values and therefore are deliberately not additive with the bank row.
+Category 30, `הוצאות בבנק`, stores an adjustment rather than the complete bank expenditure.
 
-Migration adds the bank category once, preserves transactions and existing custom categories, and prevents bank-category rename/delete and automatic recurring propagation. New duplicate monthly bank entries are rejected with an instruction to edit the existing entry. Legacy imported multiple bank entries are preserved and aggregated within their month; a zero combined amount is inactive.
+- Effective expense = ordinary recorded expense minus signed bank adjustment.
+- Green `+` saves a positive adjustment and reduces expense. Red `−` saves a negative adjustment and increases expense.
+- Enter the unsigned magnitude first. Selecting category 30 hides the recurring control, reveals the green save button in its place, and turns the existing save button red. Each button selects the sign and saves in one action.
+- Existing corrections show an unsigned magnitude; the same two buttons save changes and select the sign. The pencil unlocks the amount field.
+- Corrections never recur or copy to another month. One correction per month may be added; existing legacy rows are retained.
+- Missing/zero corrections are zero. All existing reports show all 30 expense categories, with explicit signed corrections and corrected summaries. Whole shekels omit `.00`; actual agorot remain exact.
+- Report 6 contains one row, twelve months and a signed cumulative total. It works for a partial year and supports screen and native Android printing.
 
-All five existing reports include all expense categories (30 for the standard configuration), including the reserved category, plus effective totals. Report 6 has exactly three comparison rows across 12 months: recorded expenses, nonzero bank expenses, and recorded minus bank. Missing/zero bank means no difference calculation. Positive differences use red plus and negative differences green minus; explicit signs survive monochrome printing. Monetary arithmetic uses agorot and display retains up to two decimals.
+## Compatibility
 
-Screen and printer consume the same report HTML. Added an Android PrintManager bridge with a dedicated retained WebView because browser window.print does not provide native WebView printing. Android physical printer operation remains a phone verification step. CI checks numerical edge cases, migration, restore compatibility, all screen/printer report paths, generates PDF proofs with synthetic data, and runs the existing backup/native tests. Package ID, coin icon, localStorage key and permanent signing identity are unchanged from Work 3.
+New correction rows carry `bankEntryMode: adjustment`, retained in backups. Legacy Work 4/5 bank rows stored complete monthly totals; normalization converts their monthly sum once to ordinary expense minus that total, preserving effective expense. A legacy zero total remains a zero correction. Original amounts are retained in `previousBankTotal`. Multiple legacy rows are kept, with the correction on the first and zero on the rest. Normalization and restoring a new backup are idempotent. Existing ordinary transactions, categories, localStorage key, package ID, signing identity, backup locations and native print bridge are preserved.
+
+## Validation
+
+Model checks cover both signs, zero/missing months, partial-year net sums, edit/delete, agorot, recurring exclusion, old total conversion and restore idempotence. Phone UI checks cover both saving buttons, editing magnitude/sign, normal category controls, duplicates, backup/reload, migration and all six screen/print paths. Large-amount checks cover 250,000 monthly expenses and multi-year totals within A4 landscape tables.

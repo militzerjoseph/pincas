@@ -600,9 +600,12 @@ button:disabled{opacity:.55;cursor:wait}
 .report-scroll td,.report-scroll th{font-variant-numeric:tabular-nums}
 .report-scroll .cat{display:table-cell;grid-template-columns:none}
 .bank-comparison td,.bank-category-row td:not(:first-child){white-space:nowrap}
-.difference-plus{color:#b42318;font-weight:bold}
-.difference-minus{color:#087443;font-weight:bold}
+.difference-plus{color:#087443;font-weight:bold}
+.difference-minus{color:#b42318;font-weight:bold}
 .report-scroll bdi{white-space:nowrap}
+[hidden]{display:none!important}
+#bankPositiveBtn{width:100%;padding:12px;font-size:16px;border:1px solid #087443;background:#dcfce7;color:#087443}
+#expenseSubmitBtn.bank-negative{background:#fee2e2!important;color:#b42318!important;border:1px solid #b42318!important}
 </style>
 </head>
 <body>
@@ -699,12 +702,13 @@ button:disabled{opacity:.55;cursor:wait}
       <select id="expenseCat" required onchange="syncBankEntry()"></select><div id="bankEntryNote" class="wide bank-entry-note" hidden></div>
       <input id="expensePeriod" class="wide entry-period" type="text" readonly aria-label="חודש ושנה">
       <input id="expenseDesc" class="wide" placeholder="הערה">
-      <div class="wide recurring-wrap">
+      <div id="expenseRecurringWrap" class="wide recurring-wrap">
         <button id="expenseRecurringBtn" class="recurring-btn" type="button" onclick="toggleRecurring('expense')" aria-label="לחודשים הבאים"></button>
         <span class="recurring-label">לחודשים הבאים</span>
       </div>
+      <div id="bankPositiveAction" class="wide" hidden><button id="bankPositiveBtn" type="submit" data-bank-sign="1" class="bank-positive">+ הוסף הוצאה</button></div>
       <div class="entry-actions wide">
-        <button id="expenseSubmitBtn" class="primary entry-submit" type="submit">− הוסף הוצאה</button>
+        <button id="expenseSubmitBtn" data-bank-sign="-1" class="primary entry-submit" type="submit">− הוסף הוצאה</button>
         <button id="expenseCancelBtn" class="entry-cancel" type="button" onclick="cancelEntry('expense')">ביטול</button>
       </div>
     </form>
@@ -770,7 +774,7 @@ button:disabled{opacity:.55;cursor:wait}
         </details>
       </div>
       <div class="card"><div class="label">סוג אפליקציה</div><div>APK היברידי</div></div>
-      <div class="card"><div class="label">מספר גרסה</div><div>Work 5</div></div>
+      <div class="card"><div class="label">מספר גרסה</div><div>Work 6</div></div>
       <div class="card"><div class="label">תאריך עדכון</div><div>21/10/2026</div></div>
       <div class="card"><div class="label">מקור הנתונים</div><div>אחסון מקומי במכשיר; גיבוי לטלפון ולתיקייה הנוספת שבחרת</div></div>
       <div class="card"><div class="label">תאימות שחזור</div><div>גיבויי פנקס חדש, GS ו־HTML</div></div>
@@ -848,7 +852,7 @@ button:disabled{opacity:.55;cursor:wait}
         <button onclick="selectPrintReport(3)">3. טבלת קטגוריות הוצאות מסוכמת — 12 שנים</button>
         <button onclick="selectPrintReport(4)">4. סיכום הכנסות, הוצאות ויתרה — 12 חודשים</button>
         <button onclick="selectPrintReport(5)">5. סיכום הכנסות, הוצאות ויתרה — 12 שנים</button>
-        <button onclick="selectPrintReport(6)">6. השוואת ההוצאות שלי להוצאות בבנק — 12 חודשים</button>
+        <button onclick="selectPrintReport(6)">6. הפרשי הוצאות בבנק — 12 חודשים וסיכום</button>
       </div>
       <div class="report-actions">
         <button onclick="backToDestination()">חזרה</button>
@@ -1024,6 +1028,7 @@ function normalizeData(x){
     recurring:Boolean(t&&t.recurring)&&!(t.type==='expense'&&t.category===BANK_CATEGORY),
     seriesId:String(t&&t.seriesId||'')
   }));
+  migrateBankAdjustments(x);
   if(typeof x.lastBackupAt!=='string') x.lastBackupAt='';
   x.selectedYear=Number(x.selectedYear||0);
   x.selectedMonth=Number(x.selectedMonth||0);
@@ -1058,7 +1063,7 @@ function saveThen(callback){
 }
 
 const APP_TYPE='HTML';
-const APP_VERSION='Work 5';
+const APP_VERSION='Work 6';
 const APP_UPDATE_DATE='21/10/2026';
 const DEFAULT_EXPENSE_CATEGORY='דברי מכולת';
 
@@ -1074,48 +1079,77 @@ function fill(){
     el.value=old&&ms.includes(old)?old:cur;
   }
 }
-// Monetary arithmetic is done in agorot; bank totals are never ordinary expenses.
+// Signed adjustment: positive reduces expenses, negative increases them.
 function isBankTx(t){return t.type==='expense'&&t.category===BANK_CATEGORY;}
 function cents(value){const n=Number(value);return Number.isFinite(n)?Math.round((n+Number.EPSILON)*100):0;}
 function fromCents(value){return value/100;}
+function migrateBankAdjustments(data){
+  const groups=new Map();
+  for(const t of data.tx){
+    if(!isBankTx(t)||t.bankEntryMode==='adjustment')continue;
+    const ym=String(t.date||'').slice(0,7);
+    if(!groups.has(ym))groups.set(ym,[]);
+    groups.get(ym).push(t);
+  }
+  for(const [ym,rows] of groups){
+    const recorded=data.tx.filter(t=>t.type==='expense'&&!isBankTx(t)&&String(t.date||'').slice(0,7)===ym).reduce((s,t)=>s+cents(t.amount),0);
+    const oldTotal=rows.reduce((s,t)=>s+cents(t.amount),0);
+    rows.forEach((t,i)=>{
+      t.previousBankTotal=t.amount;
+      t.amount=i===0&&oldTotal!==0?fromCents(recorded-oldTotal):0;
+      t.bankEntryMode='adjustment';t.recurring=false;t.seriesId='';
+    });
+  }
+  data.bankCalculationMode='signed-adjustment-v1';
+}
 function monthExpenses(ym){
   const rows=d.tx.filter(t=>t.type==='expense'&&String(t.date||'').slice(0,7)===ym);
-  const recordedCents=rows.filter(t=>!isBankTx(t)).reduce((s,t)=>s+cents(t.amount),0);
-  const bankCents=rows.filter(isBankTx).reduce((s,t)=>s+cents(t.amount),0);
-  const hasBank=bankCents!==0;
-  return {recordedExpense:fromCents(recordedCents),bankExpense:hasBank?fromCents(bankCents):null,hasBank,
-    expense:fromCents(hasBank?bankCents:recordedCents),difference:hasBank?fromCents(recordedCents-bankCents):null};
+  const recorded=rows.filter(t=>!isBankTx(t)).reduce((s,t)=>s+cents(t.amount),0);
+  const adjustment=rows.filter(isBankTx).reduce((s,t)=>s+cents(t.amount),0);
+  return {recordedExpense:fromCents(recorded),adjustment:fromCents(adjustment),hasBank:adjustment!==0,expense:fromCents(recorded-adjustment)};
 }
 function totals(period=''){
   const rows=d.tx.filter(t=>!period||String(t.date||'').startsWith(period));
   const months=[...new Set(rows.map(t=>String(t.date||'').slice(0,7)).filter(m=>/^\d{4}-\d{2}$/.test(m)))];
   const values=months.map(monthExpenses);
-  const sum=(key)=>fromCents(values.reduce((s,v)=>s+cents(v[key]),0));
-  const bankMonths=values.filter(v=>v.hasBank).length;
-  return {income:fromCents(rows.filter(t=>t.type==='income').reduce((s,t)=>s+cents(t.amount),0)),
-    expense:sum('expense'),recordedExpense:sum('recordedExpense'),
-    bankExpense:bankMonths?sum('bankExpense'):null,hasBank:bankMonths>0,bankMonths};
+  const sum=key=>fromCents(values.reduce((s,v)=>s+cents(v[key]),0));
+  return {income:fromCents(rows.filter(t=>t.type==='income').reduce((s,t)=>s+cents(t.amount),0)),expense:sum('expense'),recordedExpense:sum('recordedExpense'),adjustment:sum('adjustment'),hasBank:values.some(v=>v.hasBank)};
 }
 function periodKey(year,month=null){return month===null?String(year):`${year}-${String(month).padStart(2,'0')}`;}
 function bankStatusText(ym){
   const x=monthExpenses(ym);
-  return x.hasBank?'הוצאות לחישוב לפי הבנק · לפי הרישומים: '+money(x.recordedExpense):'הוצאות בבנק: לא הוזן · החישוב לפי הרישומים';
+  return 'לפי הרישומים: '+money(x.recordedExpense)+' · תיקון הוצאות בבנק: '+plainSigned(x.adjustment);
 }
 function syncBankEntry(){
-  const cat=document.getElementById('expenseCat');
-  const amount=document.getElementById('expenseAmount');
+  const cat=document.getElementById('expenseCat'),amount=document.getElementById('expenseAmount');
   if(!cat||!amount)return;
-  const bank=cat.value===BANK_CATEGORY;
-  if(bank){amount.removeAttribute('min');setRecurringButton('expense',false,true);}
-  else {amount.min='0';if(entryState.expense.id==null)setRecurringButton('expense',false,false);}
+  const bank=cat.value===BANK_CATEGORY,existing=entryState.expense.id!=null;
+  amount.min='0';
+  document.getElementById('expenseRecurringWrap').hidden=bank;
+  document.getElementById('bankPositiveAction').hidden=!bank;
+  const submit=document.getElementById('expenseSubmitBtn');
+  submit.classList.toggle('bank-negative',bank);
+  submit.style.display=bank||!existing?'':'none';
+  if(bank){
+    setRecurringButton('expense',false,true);
+    document.getElementById('bankPositiveBtn').textContent=existing?'+ שמור הוצאה':'+ הוסף הוצאה';
+    submit.textContent=existing?'− שמור הוצאה':'− הוסף הוצאה';
+  }else{
+    submit.textContent='− הוסף הוצאה';
+    if(!existing)setRecurringButton('expense',false,false);
+  }
   const note=document.getElementById('bankEntryNote');
-  if(note){note.hidden=!bank;note.textContent='סכום ההוצאות הכולל לפי הבנק לחודש הנבחר. סכום שונה מאפס מחליף את סך ההוצאות לחישוב ואינו מתווסף אליו. 0 = לא הוזן. אינו מועתק לחודשים הבאים.';}
+  if(note){
+    note.hidden=!bank;
+    const tx=existing?d.tx.find(t=>Number(t.id)===Number(entryState.expense.id)):null;
+    note.textContent='הקלד את ההפרש בלבד, בלי סימן. הכפתור הירוק (+) מקטין את ההוצאות; האדום (−) מגדיל אותן. הלחיצה שומרת את הרישום.'+(tx?' הרישום הנוכחי: '+plainSigned(tx.amount):'');
+  }
 }
-function signedDifference(value){
-  if(value===null)return 'לא הוזן';
-  const sign=value<0?'−':'+';
-  return `<bdi dir="ltr">${sign}${money(Math.abs(value))}</bdi>`;
-}
+function plainSigned(value){const n=Number(value)||0;return (n>0?'+':n<0?'−':'')+money(Math.abs(n));}
+function adjustmentClass(value){return value>0?'difference-plus':value<0?'difference-minus':'';}
+function signedDifference(value){return `<bdi dir="ltr">${plainSigned(value)}</bdi>`;}
+function txAmountHtml(t){return isBankTx(t)?signedDifference(t.amount):money(t.amount);}
+function txAmountClass(t){return isBankTx(t)?adjustmentClass(t.amount):(t.type==='income'?'good':'bad');}
 
 function view(id){document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');if(id==='home')renderHome();if(id==='income'){renderList('income');const p=document.getElementById('incomePeriod');if(p)p.value=`${String(selectedMonth).padStart(2,'0')}/${selectedYear}`;}if(id==='expense'){renderList('expense');setDefaultExpenseCategory();const p=document.getElementById('expensePeriod');if(p)p.value=`${String(selectedMonth).padStart(2,'0')}/${selectedYear}`;}if(id==='cats')renderCats();if(id==='settings'){syncDisplayScaleSetting();syncCloudBackupSetting();}if(id==='reports'){renderReport();renderMonthlyReport()};requestAnimationFrame(()=>{
   window.scrollTo(0,0);
@@ -1248,7 +1282,7 @@ function backup(){
   const stamp=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}-${pad(now.getMilliseconds(),3)}`;
   let scale=80;
   try{if(window.AndroidDisplay)scale=Number(window.AndroidDisplay.getDisplayScale());}catch(err){console.error(err);}
-  const payload={...d,lastBackupAt:now.toISOString(),_backupCreatedAt:now.toISOString(),_backupSource:'PINCAS_WORK',_backupAppVersion:'Work 5',_pincasSettings:{displayScale:scale}};
+  const payload={...d,lastBackupAt:now.toISOString(),_backupCreatedAt:now.toISOString(),_backupSource:'PINCAS_WORK',_backupAppVersion:'Work 6',_pincasSettings:{displayScale:scale}};
   const json=JSON.stringify(payload,null,2);
   const name=`גיבוי_פנקס_חדש_${stamp}.json`;
   pendingBackupKind='data';
@@ -1369,6 +1403,7 @@ function resetEntryVisual(t){
   setRecurringButton(t,false,false);
   const p=document.getElementById(t+'Period');
   if(p) p.value=`${String(selectedMonth).padStart(2,'0')}/${selectedYear}`;
+  if(t==='expense')syncBankEntry();
 }
 function openNewEntry(t){
   resetEntryVisual(t);
@@ -1385,7 +1420,7 @@ function openExistingTx(id){
   fillCats();
 
   const amount=document.getElementById(t+'Amount');
-  amount.value=tx.amount;
+  amount.value=isBankTx(tx)?Math.abs(tx.amount):tx.amount;
   amount.readOnly=true;
 
   const cat=document.getElementById(t+'Cat');
@@ -1459,6 +1494,9 @@ function toggleAmountEdit(t){
   const amount=document.getElementById(t+'Amount');
   const btn=document.getElementById(t+'EditAmountBtn');
 
+  if(t==='expense'&&document.getElementById('expenseCat').value===BANK_CATEGORY){
+    st.editing=true;amount.readOnly=false;amount.focus();amount.select();return;
+  }
   if(!st.editing){
     st.editing=true;
     amount.readOnly=false;
@@ -1500,16 +1538,36 @@ function toggleAmountEdit(t){
     setTimeout(()=>scrollToHomeTx(id),60);
   });
 }
+function saveBankAdjustment(event){
+  const sign=Number(event.submitter?.dataset.bankSign);
+  if(sign!==1&&sign!==-1){alert('בחר בכפתור הירוק + או בכפתור האדום − כדי לשמור את התיקון.');return;}
+  const field=document.getElementById('expenseAmount'),raw=Number(field.value);
+  if(field.value.trim()===''||!Number.isFinite(raw)||raw<0){alert('הקלד את סכום ההפרש בלי סימן, ובחר בכפתור הירוק או האדום.');return;}
+  const previous=d.tx.map(t=>({...t}));
+  const amount=fromCents(sign*cents(raw));
+  const current=d.tx.find(t=>Number(t.id)===Number(entryState.expense.id));
+  if(current){
+    current.amount=amount;current.bankEntryMode='adjustment';current.recurring=false;current.seriesId='';
+  }else{
+    const ym=selectedYM();
+    if(d.tx.some(t=>isBankTx(t)&&String(t.date||'').slice(0,7)===ym)){alert('כבר קיים תיקון הוצאות בבנק בחודש הזה. פתח את הרישום הקיים כדי לערוך אותו.');return;}
+    d.tx.push({id:nextTxId(),type:'expense',date:`${ym}-01`,category:BANK_CATEGORY,amount,desc:document.getElementById('expenseDesc').value||'',recurring:false,seriesId:'',bankEntryMode:'adjustment'});
+  }
+  if(!save()){d.tx=previous;return;}
+  resetEntryVisual('expense');renderList('expense');renderHome();renderReport();renderMonthlyReport();view('home');
+}
 function addTx(e,t){
   e.preventDefault();
+  if(t==='expense'&&document.getElementById('expenseCat').value===BANK_CATEGORY){
+    saveBankAdjustment(e);return;
+  }
   const ym=selectedYM();
   const id=nextTxId();
   const rec=recurringValue(t)&&!(t==='expense'&&document.getElementById(t+'Cat').value===BANK_CATEGORY);
   const chosenCat=document.getElementById(t+'Cat').value;
   const amount=Number(document.getElementById(t+'Amount').value);
   const note=document.getElementById(t+'Desc')?.value||'';
-  if(!Number.isFinite(amount)||(amount<0&&!(t==='expense'&&chosenCat===BANK_CATEGORY))){alert('נא להזין סכום תקין');return;}
-  if(t==='expense'&&chosenCat===BANK_CATEGORY&&d.tx.some(x=>isBankTx(x)&&String(x.date||'').slice(0,7)===ym)){alert('כבר קיים רישום הוצאות בבנק לחודש הזה. פתח אותו ברשימה וערוך את הסכום, או מחק אותו לפני הוספת רישום חדש.');return;}
+  if(!Number.isFinite(amount)||amount<0){alert('נא להזין סכום תקין');return;}
 
   d.tx.push({
     id:id,
@@ -1544,7 +1602,7 @@ function renderList(t){
     <td>${esc(x.date)}</td>
     <td>${esc(x.category)}</td>
     <td>${esc(x.desc||'')} ${x.recurring?'↪':''}</td>
-    <td class="${t==='income'?'good':'bad'}">${money(x.amount)}</td>
+    <td class="${txAmountClass(x)}">${txAmountHtml(x)}</td>
     <td><button class="danger" onclick="event.stopPropagation();delTx(${x.id})">מחק</button></td>
   </tr>`).join('')||`<tr><td colspan="5">אין ${t==='income'?'הכנסות':'הוצאות'}</td></tr>`;
 }
@@ -1589,7 +1647,7 @@ function renderHome(){
     body.innerHTML=rows.map((t,i)=>`<tr class="tx-clickable" data-tx-id="${t.id}" onclick="openExistingTx(${t.id})">
       <td class="seq">#${String(rows.length-i).padStart(3,'0')}</td>
       <td>${esc(t.category)}${t.recurring?' <span title="לחודשים הבאים">↪</span>':''}</td>
-      <td class="${t.type==='income'?'good':'bad'}">${money(t.amount)}</td>
+      <td class="${txAmountClass(t)}">${txAmountHtml(t)}</td>
       <td><button class="trash-btn" onclick="event.stopPropagation();deleteTx(${t.id})" title="מחיקת תנועה" aria-label="מחיקה">🗑</button></td>
     </tr>`).join('') || '<tr><td colspan="4">אין תנועות בחודש זה.</td></tr>';
   }
@@ -1602,7 +1660,7 @@ function renderCats(){
   expenseCats.innerHTML=d.expenseCats.map((c,i)=>crow('expense',c,i)).join('');
 }
 function crow(t,c,i){
-  if(t==='expense'&&c.name===BANK_CATEGORY)return `<div class="cat bank-category-row"><input value="30. ${esc(c.name)}" readonly aria-label="קטגוריית הוצאות בבנק"><span>סכום בנק</span></div>`;
+  if(t==='expense'&&c.name===BANK_CATEGORY)return `<div class="cat bank-category-row"><input value="30. ${esc(c.name)}" readonly aria-label="קטגוריית הוצאות בבנק"><span>תיקון + / −</span></div>`;
   return `<div class="cat"><input value="${esc(c.name)}" onchange="rename('${t}',${i},this.value)"><button onclick="removeCat('${t}',${i})">מחק</button></div>`;
 }
 function rename(t,i,n){
@@ -1694,7 +1752,7 @@ function renderMonthlyReport(){
       <td>${t.type==='income'?'הכנסה':'הוצאה'}</td>
       <td>${esc(t.category)}</td>
       <td>${esc(t.desc)} ${t.recurring?'🔄':''}</td>
-      <td class="${t.type==='income'?'good':'bad'}">${isBankTx(t)&&cents(t.amount)===0?'לא הוזן':money(t.amount)}</td>
+      <td class="${txAmountClass(t)}">${txAmountHtml(t)}</td>
     </tr>`).join('') || '<tr><td colspan="5">אין תנועות בחודש זה.</td></tr>';
   }
 }
@@ -1824,7 +1882,7 @@ function selectPrintReport(n){
         <label>שנה<input id="rpYear" type="number" min="1900" max="2100" value="${selectedYear}"></label>
       </div>`;
   }else if(n===6){
-    p.innerHTML=`<h3>השוואת הרישומים לבנק — 12 חודשים</h3><div class="report-controls"><label>שנה<input id="rpYear" type="number" min="1900" max="2100" value="${selectedYear}"></label></div>`;
+    p.innerHTML=`<h3>הפרשי הוצאות בבנק — 12 חודשים וסיכום</h3><div class="report-controls"><label>שנה<input id="rpYear" type="number" min="1900" max="2100" value="${selectedYear}"></label></div>`;
   }else{
     p.innerHTML=`<h3>סיכום הכנסות, הוצאות ויתרה — 12 שנים</h3>
       <div class="report-controls">
@@ -1839,7 +1897,7 @@ function selectPrintReport(n){
 
 function getExpenseCategoryNames(){return d.expenseCats.map(x=>x.name);}
 function amountForExpenseCategory(category,year,month=null){
-  if(category===BANK_CATEGORY)return totals(periodKey(year,month)).bankExpense;
+  if(category===BANK_CATEGORY)return totals(periodKey(year,month)).adjustment;
   return fromCents(d.tx.filter(t=>t.type==='expense'&&t.category===category&&String(t.date||'').startsWith(periodKey(year,month)))
     .reduce((s,t)=>s+cents(t.amount),0));
 }
@@ -1849,11 +1907,11 @@ function categoryRows(periods){
     const entered=vals.filter(v=>v!==null);
     const sum=entered.length?fromCents(entered.reduce((s,v)=>s+cents(v),0)):null;
     const bank=cat===BANK_CATEGORY;
-    const cell=v=>v===null?'לא הוזן':(bank||v!==0?money(v):'');
-    return `<tr data-category="${esc(cat)}" class="${bank?'bank-category-row':''}"><td class="cat">${esc(cat)}</td>${vals.map(v=>`<td>${cell(v)}</td>`).join('')}<td><b>${cell(sum)}</b></td></tr>`;
+    const cell=v=>bank?signedDifference(v):(v!==0?money(v):'');
+    return `<tr data-category="${esc(cat)}" class="${bank?'bank-category-row':''}"><td class="cat">${esc(cat)}</td>${vals.map(v=>`<td class="${bank?adjustmentClass(v):''}">${cell(v)}</td>`).join('')}<td class="${bank?adjustmentClass(sum):''}"><b>${cell(sum)}</b></td></tr>`;
   }).join('');
 }
-function calculationNote(){return '<div class="report-note">הסיכום הקובע מחושב לכל חודש בנפרד: הוצאות בבנק כאשר הסכום שונה מ־0, ובשאר החודשים סך ההוצאות הרגילות. שורת הבנק אינה מתווספת לקטגוריות. „לא הוזן” = אין סכום בנקאי או שהסכום הוא 0.</div>';}
+function calculationNote(){return '<div class="report-note">סך ההוצאות לחישוב = סך 29 קטגוריות ההוצאות פחות התיקון בקטגוריית הוצאות בבנק. + מקטין את ההוצאות; − מגדיל אותן. חודש ללא תיקון = 0.</div>';}
 function expenseCategoryTable(periods,labels,title='פירוט קטגוריות ההוצאות'){
   const vals=periods.map(p=>totals(periodKey(p.year,p.month??null)).expense);
   const total=fromCents(vals.reduce((s,v)=>s+cents(v),0));
@@ -1878,8 +1936,8 @@ function reportSummary(periods,labels){
 function makeReport1(year,month){
   const ym=periodKey(year,month);
   const rows=d.tx.filter(t=>String(t.date||'').slice(0,7)===ym).sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
-  const body=rows.map((t,i)=>`<tr><td>#${String(rows.length-i).padStart(3,'0')}</td><td>${esc(t.category)}${isBankTx(t)?' (סכום בנק חודשי)':''}</td>
-    <td class="${t.type==='income'?'income-amount':'expense-amount'}"><bdi dir="ltr">${isBankTx(t)&&cents(t.amount)===0?'לא הוזן':money(t.type==='expense'?-t.amount:t.amount)}</bdi></td></tr>`).join('')||'<tr><td colspan="3">אין תנועות בתקופה שנבחרה.</td></tr>';
+  const body=rows.map((t,i)=>`<tr><td>#${String(rows.length-i).padStart(3,'0')}</td><td>${esc(t.category)}${isBankTx(t)?' (תיקון)':''}</td>
+    <td class="${isBankTx(t)?adjustmentClass(t.amount):t.type==='income'?'income-amount':'expense-amount'}">${isBankTx(t)?signedDifference(t.amount):`<bdi dir="ltr">${money(t.type==='expense'?-t.amount:t.amount)}</bdi>`}</td></tr>`).join('')||'<tr><td colspan="3">אין תנועות בתקופה שנבחרה.</td></tr>';
   return `<div class="report-title">רשימת הכנסות והוצאות</div><div class="report-subtitle">${ml(ym)} — ${rows.length} תנועות</div>
     <div class="report-scroll"><table class="report1-table"><thead><tr><th>מס׳</th><th>קטגוריה</th><th>סכום</th></tr></thead><tbody>${body}</tbody></table></div>
     ${expenseCategoryTable([{year,month}],[ml(ym)])}${reportSummary([{year,month}],[ml(ym)])}`;
@@ -1903,14 +1961,12 @@ function incomeTable(periods,labels){return `<div class="report-subtitle">פיר
 function makeReport4(year){const p=yearMonths(year),labels=monthNames();return `<div class="report-title">סיכום הכנסות, הוצאות ויתרה — 12 חודשים</div><div class="report-subtitle">שנת ${year}</div>${incomeTable(p,labels)}${expenseCategoryTable(p,labels)}${reportSummary(p,labels)}`;}
 function makeReport5(endYear){const p=Array.from({length:12},(_,i)=>({year:Number(endYear)-i})),labels=p.map(x=>String(x.year));return `<div class="report-title">סיכום הכנסות, הוצאות ויתרה — 12 שנים</div>${incomeTable(p,labels)}${expenseCategoryTable(p,labels)}${reportSummary(p,labels)}`;}
 function makeReport6(year){
-  const p=yearMonths(year),vals=p.map(x=>monthExpenses(periodKey(x.year,x.month)));
-  const row=(label,values,signed=false)=>`<tr data-comparison-row><td class="cat">${label}</td>${values.map(v=>`<td class="${signed&&v!==null?(v>0?'difference-plus':v<0?'difference-minus':''):''}">${signed?signedDifference(v):v===null?'לא הוזן':money(v)}</td>`).join('')}</tr>`;
-  return `<div class="report-title">השוואת הוצאות לפי הרישומים ולפי הבנק — 12 חודשים</div><div class="report-subtitle">שנת ${year}</div>
-    <div class="report-scroll"><table class="bank-comparison"><thead><tr><th>השוואת הוצאות</th>${monthNames().map(x=>`<th>${esc(x)}</th>`).join('')}</tr></thead><tbody>
-    ${row('הוצאות לפי הרישומים שלי',vals.map(x=>x.recordedExpense))}
-    ${row(BANK_CATEGORY,vals.map(x=>x.bankExpense))}
-    ${row('הפרש: הרישומים פחות הבנק',vals.map(x=>x.difference),true)}
-    </tbody></table></div><div class="report-note">הפרש = הרישומים פחות הבנק. + באדום: הרישומים גבוהים מהבנק; − בירוק: הרישומים נמוכים מהבנק. אם סכום הבנק חסר או 0 מוצג „לא הוזן” ואין חישוב הפרש.</div>`;
+  const vals=yearMonths(year).map(p=>monthExpenses(periodKey(p.year,p.month)).adjustment);
+  const total=fromCents(vals.reduce((s,v)=>s+cents(v),0));
+  const cell=v=>`<td class="${adjustmentClass(v)}">${signedDifference(v)}</td>`;
+  return `<div class="report-title">הפרשי הוצאות בבנק — 12 חודשים</div><div class="report-subtitle">שנת ${year}</div>
+    <div class="report-scroll"><table class="bank-comparison"><thead><tr><th>תיקון הוצאות</th>${monthNames().map(x=>`<th>${esc(x)}</th>`).join('')}<th>סה״כ מצטבר</th></tr></thead>
+    <tbody><tr data-comparison-row><td class="cat">${BANK_CATEGORY}</td>${vals.map(cell).join('')}${cell(total)}</tr></tbody></table></div>${calculationNote()}`;
 }
 function renderInlineExpenseCategories(years=null){
   const monthly=document.getElementById('monthlyExpenseCategories');
@@ -1959,7 +2015,7 @@ function buildPrintDocument(reportHtml){
   th{background:#eee}td.cat{text-align:right;font-weight:700;display:table-cell}
   .income-amount{color:#12805c;font-weight:700}.expense-amount{color:#d92d20;font-weight:700}
   .total-row{font-weight:800;background:#f5f5f5}.bank-category-row{background:#fff2c9}
-  .difference-plus{color:#b42318;font-weight:bold}.difference-minus{color:#087443;font-weight:bold}
+  .difference-plus{color:#087443;font-weight:bold}.difference-minus{color:#b42318;font-weight:bold}
   .report-note{font-size:11px;line-height:1.5;margin:8px 0 14px}
   bdi,.bank-comparison td:not(:first-child),.bank-category-row td:not(:first-child){white-space:nowrap}
   .report1-table td:nth-child(2){text-align:right}

@@ -9,7 +9,7 @@ const path=require('node:path'),fs=require('node:fs'),assert=require('node:asser
   const tx=[];let id=0;
   for(let y=2015;y<=2026;y++)for(let m=1;m<=12;m++){
    const date=`${y}-${String(m).padStart(2,'0')}-01`;
-   tx.push({id:++id,type:'expense',category:BANK_CATEGORY,date,amount:250000});
+   tx.push({id:++id,type:'expense',category:BANK_CATEGORY,date,amount:-1000,bankEntryMode:'adjustment'});
    tx.push({id:++id,type:'expense',category:exp[0],date,amount:249000});
    tx.push({id:++id,type:'income',category:inc[0],date,amount:500000});
   }
@@ -29,7 +29,7 @@ const path=require('node:path'),fs=require('node:fs'),assert=require('node:asser
   assert.ok(await amountCell.evaluate(e=>e.scrollWidth<=e.clientWidth+1),'transaction amount clipped');
  }
  await page.evaluate(()=>{openExistingTx(d.tx.find(t=>isBankTx(t)&&t.date==='2026-01-01').id)});
- assert.equal(await page.locator('#expenseAmount').inputValue(),'250000');
+ assert.equal(await page.locator('#expenseAmount').inputValue(),'1000');
  await page.evaluate(()=>view('home'));
  assert.equal(await page.evaluate(()=>totals('2026').expense),3000000);
  assert.match(clean(await page.evaluate(()=>money(250000.25))),/250,000\.25/);
@@ -38,7 +38,7 @@ const path=require('node:path'),fs=require('node:fs'),assert=require('node:asser
  for(let n=1;n<=6;n++){
   await page.evaluate(n=>{openPrintChoice();chooseReportDestination('screen');selectPrintReport(n)},n);
   const screenText=await page.locator('#reportOutput').innerText();
-  assert.match(screenText,n===3||n===5?/3,000,000/:/250,000/);
+  assert.match(screenText,n===6?/1,000/:n===3||n===5?/3,000,000/:/250,000/);
   assert.doesNotMatch(screenText,/\.00/);
   const doc=await page.evaluate(n=>buildPrintDocument(n===1?makeReport1(2026,1):window[`makeReport${n}`](2026)),n);
   const proof=await browser.newPage({viewport:{width:1062,height:900}});
