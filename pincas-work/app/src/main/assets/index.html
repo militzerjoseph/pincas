@@ -1908,7 +1908,7 @@ function makeReport6(year){
   return `<div class="report-title">השוואת הוצאות לפי הרישומים ולפי הבנק — 12 חודשים</div><div class="report-subtitle">שנת ${year}</div>
     <div class="report-scroll"><table class="bank-comparison"><thead><tr><th>השוואת הוצאות</th>${monthNames().map(x=>`<th>${esc(x)}</th>`).join('')}</tr></thead><tbody>
     ${row('הוצאות לפי הרישומים שלי',vals.map(x=>x.recordedExpense))}
-    ${row('הוצאות לפי הבנק',vals.map(x=>x.bankExpense))}
+    ${row(BANK_CATEGORY,vals.map(x=>x.bankExpense))}
     ${row('הפרש: הרישומים פחות הבנק',vals.map(x=>x.difference),true)}
     </tbody></table></div><div class="report-note">הפרש = הרישומים פחות הבנק. + באדום: הרישומים גבוהים מהבנק; − בירוק: הרישומים נמוכים מהבנק. אם סכום הבנק חסר או 0 מוצג „לא הוזן” ואין חישוב הפרש.</div>`;
 }
