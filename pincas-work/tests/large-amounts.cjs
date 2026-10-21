@@ -19,7 +19,8 @@ const path=require('node:path'),fs=require('node:fs'),assert=require('node:asser
  const clean=s=>s.replace(/[\u200e\u200f\u061c]/g,'');
  assert.match(clean(await page.locator('#he').innerText()),/250,000\s*₪/);
  assert.doesNotMatch(await page.locator('#he').innerText(),/\.00/);
- assert.match(await page.locator('#homeTxBody').innerText(),/250,000/);
+ assert.match(await page.locator('#homeTxBody').innerText(),/249,000/);
+ assert.match(await page.locator('#homeTxBody').innerText(),/−.*1,000/);
  for(const width of [360,412,515]){
   await page.setViewportSize({width,height:915});
   const fit=await page.locator('#he').evaluate(e=>({width:e.clientWidth,scroll:e.scrollWidth,body:document.documentElement.scrollWidth,viewport:innerWidth}));
