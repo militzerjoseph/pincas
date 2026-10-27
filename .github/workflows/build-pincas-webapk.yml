@@ -41,6 +41,21 @@ jobs:
           path: ~/.android/debug.keystore
           key: pincas-webapk-signing-v1
 
+      - name: Ensure stable signing key exists
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -v \
+              -keystore "$HOME/.android/debug.keystore" \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -dname "CN=Android Debug,O=Android,C=US" \
+              -keyalg RSA -keysize 2048 -validity 10000
+          fi
+          keytool -list -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey >/dev/null
+
       - name: Restore recovered launcher icon
         shell: bash
         run: |
@@ -62,7 +77,7 @@ jobs:
         shell: bash
         run: |
           cp pincas-webapk/app/build/outputs/apk/debug/app-debug.apk PINCAS_WEBAPK.apk
-          cp ~/.android/debug.keystore PINCAS_WEBAPK_debug.keystore
+          cp "$HOME/.android/debug.keystore" PINCAS_WEBAPK_debug.keystore
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
