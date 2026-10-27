@@ -35,6 +35,12 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      - name: Restore stable signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: pincas-webapk-signing-v1
+
       - name: Restore recovered launcher icon
         shell: bash
         run: |
@@ -52,12 +58,22 @@ jobs:
       - name: Build installable APK
         run: gradle -p pincas-webapk assembleDebug
 
-      - name: Prepare APK
-        run: cp pincas-webapk/app/build/outputs/apk/debug/app-debug.apk PINCAS_WEBAPK.apk
+      - name: Prepare APK and signing backup
+        shell: bash
+        run: |
+          cp pincas-webapk/app/build/outputs/apk/debug/app-debug.apk PINCAS_WEBAPK.apk
+          cp ~/.android/debug.keystore PINCAS_WEBAPK_debug.keystore
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: PINCAS-WEBAPK
           path: PINCAS_WEBAPK.apk
+          if-no-files-found: error
+
+      - name: Upload signing-key backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: PINCAS-WEBAPK-signing-key
+          path: PINCAS_WEBAPK_debug.keystore
           if-no-files-found: error
