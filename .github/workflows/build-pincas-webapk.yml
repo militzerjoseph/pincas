@@ -1,0 +1,63 @@
+name: Build PINCAS WebAPK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'pincas-webapk/**'
+      - '.github/workflows/build-pincas-webapk.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK 35
+        shell: bash
+        run: |
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          fi
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Restore recovered launcher icon
+        shell: bash
+        run: |
+          mkdir -p pincas-webapk/app/src/main/res/drawable
+          base64 -d pincas-webapk/icon.b64 > pincas-webapk/app/src/main/res/drawable/ic_launcher.png
+          file pincas-webapk/app/src/main/res/drawable/ic_launcher.png
+
+      - name: Verify PINCAS WebAPK source
+        shell: bash
+        run: |
+          grep -q "applicationId 'com.example.pincaswebapk'" pincas-webapk/app/build.gradle
+          grep -q 'פנקס הכנסות והוצאות' pincas-webapk/app/src/main/AndroidManifest.xml
+          grep -q 'AKfycbyoJeN1G2EuGczP88itz2r2OKXH5GWL45c3ICe9L2kOHG2rNIFYJ98aRx0UPyZEIHyKxA' pincas-webapk/app/src/main/java/com/example/pincaswebapk/MainActivity.java
+
+      - name: Build installable APK
+        run: gradle -p pincas-webapk assembleDebug
+
+      - name: Prepare APK
+        run: cp pincas-webapk/app/build/outputs/apk/debug/app-debug.apk PINCAS_WEBAPK.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PINCAS-WEBAPK
+          path: PINCAS_WEBAPK.apk
+          if-no-files-found: error
