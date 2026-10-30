@@ -3,6 +3,8 @@ package com.militzerjoseph.monthlyincome2;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ContentValues;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
@@ -106,7 +108,12 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public String getVersionName() {
-            return "1.0";
+            try {
+                PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), 0);
+                return info.versionName == null ? "" : info.versionName;
+            } catch (PackageManager.NameNotFoundException e) {
+                return "";
+            }
         }
     }
 
