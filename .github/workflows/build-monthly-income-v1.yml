@@ -44,7 +44,6 @@ jobs:
           python <<'PY'
           from pathlib import Path
           from PIL import Image, ImageDraw, ImageFont
-
           out = Path('monthly-income-calculator/app/src/main/res/drawable')
           out.mkdir(parents=True, exist_ok=True)
           s = 512
@@ -54,8 +53,7 @@ jobs:
           d.rounded_rectangle((82,170,430,382), radius=36, fill='#F2B72E', outline='#D49312', width=8)
           d.polygon([(88,170),(88,132),(215,132),(246,170)], fill='#F2B72E')
           d.line([(91,170),(91,138),(212,138),(240,170)], fill='#D49312', width=8, joint='curve')
-          font_path = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
-          font = ImageFont.truetype(font_path, 154)
+          font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 154)
           text = '₪'
           box = d.textbbox((0,0), text, font=font)
           tw, th = box[2]-box[0], box[3]-box[1]
@@ -93,9 +91,10 @@ jobs:
           grep -q 'android:allowBackup="false"' "$MAN"
           ! grep -q 'android:debuggable=' "$MAN"
           grep -q 'android:usesCleartextTraffic="false"' "$MAN"
+          grep -q 'android:label="מחשבון חדש"' "$MAN"
           grep -q "applicationId 'com.militzerjoseph.monthlyincome2'" monthly-income-calculator/app/build.gradle
-          grep -q 'versionCode 1' monthly-income-calculator/app/build.gradle
-          grep -q "versionName '1.0'" monthly-income-calculator/app/build.gradle
+          grep -q 'versionCode 2' monthly-income-calculator/app/build.gradle
+          grep -q "versionName '1.1'" monthly-income-calculator/app/build.gradle
 
       - name: Build unsigned release APK
         run: gradle -p monthly-income-calculator assembleRelease --stacktrace
@@ -107,8 +106,8 @@ jobs:
           APK=monthly-income-calculator/app/build/outputs/apk/release/app-release-unsigned.apk
           "$BT/aapt" dump badging "$APK" | tee apk-badging.txt
           "$BT/aapt" dump permissions "$APK" | tee apk-permissions.txt
-          grep -q "package: name='com.militzerjoseph.monthlyincome2' versionCode='1' versionName='1.0'" apk-badging.txt
-          grep -q "application-label:'מחשבון הכנסה חודשית'" apk-badging.txt
+          grep -q "package: name='com.militzerjoseph.monthlyincome2' versionCode='2' versionName='1.1'" apk-badging.txt
+          grep -q "application-label:'מחשבון חדש'" apk-badging.txt
           if grep -q 'application-debuggable' apk-badging.txt; then
             echo 'Release APK is unexpectedly debuggable'
             exit 1
@@ -126,16 +125,16 @@ jobs:
       - name: Prepare build artifacts
         shell: bash
         run: |
-          cp monthly-income-calculator/app/build/outputs/apk/release/app-release-unsigned.apk MonthlyIncomeCalculator_V1_unsigned.apk
-          cat apk-badging.txt apk-permissions.txt > MonthlyIncomeCalculator_V1_build_report.txt
+          cp monthly-income-calculator/app/build/outputs/apk/release/app-release-unsigned.apk MonthlyIncomeCalculator_V1_1_unsigned.apk
+          cat apk-badging.txt apk-permissions.txt > MonthlyIncomeCalculator_V1_1_build_report.txt
 
       - name: Upload unsigned APK and report
         uses: actions/upload-artifact@v4
         with:
-          name: monthly-income-v1-unsigned
+          name: monthly-income-v1-1-unsigned
           path: |
-            MonthlyIncomeCalculator_V1_unsigned.apk
-            MonthlyIncomeCalculator_V1_build_report.txt
+            MonthlyIncomeCalculator_V1_1_unsigned.apk
+            MonthlyIncomeCalculator_V1_1_build_report.txt
           if-no-files-found: error
 
       - name: Prepare signer tools
