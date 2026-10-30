@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f6efdd">
+  <title>מחשבון הכנסה חודשית</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div class="hero-icon" aria-hidden="true">₪</div>
+      <div>
+        <h1>מחשבון הכנסה חודשית</h1>
+        <div class="version">גרסה <span id="version">1.0</span></div>
+      </div>
+    </header>
+
+    <section class="card inputs-card" aria-label="נתוני חישוב">
+      <label class="field">
+        <span>קרן התחלתית</span>
+        <div class="input-wrap"><input id="principal" type="number" inputmode="decimal" min="0" step="1000"><b>₪</b></div>
+      </label>
+      <label class="field">
+        <span>ריבית שנתית</span>
+        <div class="input-wrap"><input id="annualRate" type="number" inputmode="decimal" min="0" step="0.1"><b>%</b></div>
+      </label>
+      <label class="field">
+        <span>משיכה חודשית</span>
+        <div class="input-wrap"><input id="monthlyWithdrawal" type="number" inputmode="decimal" min="0" step="100"><b>₪</b></div>
+      </label>
+      <button id="calculateBtn" class="primary">חשב</button>
+    </section>
+
+    <section class="card result-card" aria-live="polite">
+      <div class="result-label">מספר שנים שהקרן מספיקה</div>
+      <div id="yearsValue" class="years">—</div>
+      <div id="statusPill" class="status">הזן נתונים ולחץ חשב</div>
+    </section>
+
+    <section class="summary-grid">
+      <article class="summary-card green">
+        <span>יתרה סופית</span>
+        <strong id="finalBalance">—</strong>
+      </article>
+      <article class="summary-card gold">
+        <span>ריבית מצטברת</span>
+        <strong id="totalInterest">—</strong>
+      </article>
+      <article class="summary-card red">
+        <span>סכום משיכות כולל</span>
+        <strong id="totalWithdrawals">—</strong>
+      </article>
+    </section>
+
+    <details class="card table-card">
+      <summary>טבלת חישוב חודשית <small>עד 20 השנים הראשונות</small></summary>
+      <div class="table-scroll">
+        <table>
+          <thead>
+          <tr>
+            <th>חודש</th>
+            <th>שנה</th>
+            <th>יתרת פתיחה</th>
+            <th>ריבית</th>
+            <th>לפני משיכה</th>
+            <th>משיכה</th>
+            <th>יתרת סגירה</th>
+          </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </details>
+
+    <section class="footer-actions">
+      <button id="backupBtn" class="secondary">גיבוי APK</button>
+      <p>הנתונים אינם דורשים גיבוי: שלושת הערכים האחרונים נשמרים אוטומטית במכשיר.</p>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
