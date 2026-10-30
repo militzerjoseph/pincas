@@ -87,14 +87,18 @@ jobs:
         shell: bash
         run: |
           MAN=monthly-income-calculator/app/src/main/AndroidManifest.xml
+          MAIN=monthly-income-calculator/app/src/main/java/com/militzerjoseph/monthlyincome2/MainActivity.java
           ! grep -q '<uses-permission' "$MAN"
           grep -q 'android:allowBackup="false"' "$MAN"
           ! grep -q 'android:debuggable=' "$MAN"
           grep -q 'android:usesCleartextTraffic="false"' "$MAN"
           grep -q 'android:label="מחשבון חדש"' "$MAN"
           grep -q "applicationId 'com.militzerjoseph.monthlyincome2'" monthly-income-calculator/app/build.gradle
-          grep -q 'versionCode 2' monthly-income-calculator/app/build.gradle
-          grep -q "versionName '1.1'" monthly-income-calculator/app/build.gradle
+          grep -q 'versionCode 3' monthly-income-calculator/app/build.gradle
+          grep -q "versionName '1.2'" monthly-income-calculator/app/build.gradle
+          grep -q 'getPackageInfo(getPackageName(), 0)' "$MAIN"
+          ! grep -q 'return "1.0"' "$MAIN"
+          ! grep -q 'return "1.1"' "$MAIN"
 
       - name: Build unsigned release APK
         run: gradle -p monthly-income-calculator assembleRelease --stacktrace
@@ -106,7 +110,7 @@ jobs:
           APK=monthly-income-calculator/app/build/outputs/apk/release/app-release-unsigned.apk
           "$BT/aapt" dump badging "$APK" | tee apk-badging.txt
           "$BT/aapt" dump permissions "$APK" | tee apk-permissions.txt
-          grep -q "package: name='com.militzerjoseph.monthlyincome2' versionCode='2' versionName='1.1'" apk-badging.txt
+          grep -q "package: name='com.militzerjoseph.monthlyincome2' versionCode='3' versionName='1.2'" apk-badging.txt
           grep -q "application-label:'מחשבון חדש'" apk-badging.txt
           if grep -q 'application-debuggable' apk-badging.txt; then
             echo 'Release APK is unexpectedly debuggable'
@@ -125,16 +129,16 @@ jobs:
       - name: Prepare build artifacts
         shell: bash
         run: |
-          cp monthly-income-calculator/app/build/outputs/apk/release/app-release-unsigned.apk MonthlyIncomeCalculator_V1_1_unsigned.apk
-          cat apk-badging.txt apk-permissions.txt > MonthlyIncomeCalculator_V1_1_build_report.txt
+          cp monthly-income-calculator/app/build/outputs/apk/release/app-release-unsigned.apk MonthlyIncomeCalculator_V1_2_unsigned.apk
+          cat apk-badging.txt apk-permissions.txt > MonthlyIncomeCalculator_V1_2_build_report.txt
 
       - name: Upload unsigned APK and report
         uses: actions/upload-artifact@v4
         with:
-          name: monthly-income-v1-1-unsigned
+          name: monthly-income-v1-2-unsigned
           path: |
-            MonthlyIncomeCalculator_V1_1_unsigned.apk
-            MonthlyIncomeCalculator_V1_1_build_report.txt
+            MonthlyIncomeCalculator_V1_2_unsigned.apk
+            MonthlyIncomeCalculator_V1_2_build_report.txt
           if-no-files-found: error
 
       - name: Prepare signer tools
