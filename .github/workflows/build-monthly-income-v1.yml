@@ -1,0 +1,153 @@
+name: Build Monthly Income Calculator V1
+
+on:
+  push:
+    branches:
+      - monthly-income-calculator-v1-20261030
+    paths:
+      - 'monthly-income-calculator/**'
+      - '.github/workflows/build-monthly-income-v1.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK 35
+        shell: bash
+        run: |
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          fi
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Generate approved launcher icon
+        shell: bash
+        run: |
+          python -m pip install --disable-pip-version-check pillow
+          python <<'PY'
+          from pathlib import Path
+          from PIL import Image, ImageDraw, ImageFont
+
+          out = Path('monthly-income-calculator/app/src/main/res/drawable')
+          out.mkdir(parents=True, exist_ok=True)
+          s = 512
+          im = Image.new('RGBA', (s, s), (0,0,0,0))
+          d = ImageDraw.Draw(im)
+          d.rounded_rectangle((28,28,484,484), radius=105, fill='#FFF5CF')
+          d.rounded_rectangle((82,170,430,382), radius=36, fill='#F2B72E', outline='#D49312', width=8)
+          d.polygon([(88,170),(88,132),(215,132),(246,170)], fill='#F2B72E')
+          d.line([(91,170),(91,138),(212,138),(240,170)], fill='#D49312', width=8, joint='curve')
+          font_path = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
+          font = ImageFont.truetype(font_path, 154)
+          text = '₪'
+          box = d.textbbox((0,0), text, font=font)
+          tw, th = box[2]-box[0], box[3]-box[1]
+          d.text(((s-tw)/2, 238-th/2), text, font=font, fill='#493A1F')
+          im.save(out/'ic_launcher.png')
+          PY
+
+      - name: Verify calculator logic
+        shell: bash
+        run: |
+          node --check monthly-income-calculator/app/src/main/assets/app.js
+          node <<'NODE'
+          const { calculateModel } = require('./monthly-income-calculator/app/src/main/assets/app.js');
+          function assert(c,m){ if(!c) throw new Error(m); }
+          const a=calculateModel(2500000,4,18000);
+          assert(a.depleted, 'default example should deplete');
+          assert(a.months===187, `expected 187 months, got ${a.months}`);
+          assert(Math.abs(a.years-15.5833333333)<1e-8, 'default years mismatch');
+          assert(Math.abs(a.finalBalance)<0.01, 'default final balance should be zero');
+          const b=calculateModel(120000,0,10000);
+          assert(b.months===12 && b.depleted, 'zero-interest 12 month case failed');
+          const c=calculateModel(100000,12,1000);
+          assert(c.sustainable && !c.depleted, 'sustainable case failed');
+          let threw=false;
+          try { calculateModel(0,4,1000); } catch(e) { threw=true; }
+          assert(threw, 'invalid principal must fail');
+          console.log('Calculator tests passed');
+          NODE
+
+      - name: Verify source safety constraints
+        shell: bash
+        run: |
+          MAN=monthly-income-calculator/app/src/main/AndroidManifest.xml
+          ! grep -q '<uses-permission' "$MAN"
+          grep -q 'android:allowBackup="false"' "$MAN"
+          grep -q 'android:debuggable="false"' "$MAN"
+          grep -q 'android:usesCleartextTraffic="false"' "$MAN"
+          grep -q "applicationId 'com.militzerjoseph.monthlyincome2'" monthly-income-calculator/app/build.gradle
+          grep -q 'versionCode 1' monthly-income-calculator/app/build.gradle
+          grep -q "versionName '1.0'" monthly-income-calculator/app/build.gradle
+
+      - name: Build unsigned release APK
+        run: gradle -p monthly-income-calculator assembleRelease --stacktrace
+
+      - name: Inspect APK metadata and permissions
+        shell: bash
+        run: |
+          BT="$ANDROID_HOME/build-tools/35.0.0"
+          APK=monthly-income-calculator/app/build/outputs/apk/release/app-release-unsigned.apk
+          "$BT/aapt" dump badging "$APK" | tee apk-badging.txt
+          "$BT/aapt" dump permissions "$APK" | tee apk-permissions.txt
+          grep -q "package: name='com.militzerjoseph.monthlyincome2' versionCode='1' versionName='1.0'" apk-badging.txt
+          grep -q "application-label:'מחשבון הכנסה חודשית'" apk-badging.txt
+          if grep -q 'uses-permission:' apk-permissions.txt; then
+            echo 'Unexpected permission found:'
+            cat apk-permissions.txt
+            exit 1
+          fi
+          unzip -l "$APK" | tee apk-contents.txt
+          grep -q 'assets/index.html' apk-contents.txt
+          grep -q 'assets/app.js' apk-contents.txt
+          grep -q 'assets/styles.css' apk-contents.txt
+
+      - name: Prepare build artifacts
+        shell: bash
+        run: |
+          cp monthly-income-calculator/app/build/outputs/apk/release/app-release-unsigned.apk MonthlyIncomeCalculator_V1_unsigned.apk
+          cat apk-badging.txt apk-permissions.txt > MonthlyIncomeCalculator_V1_build_report.txt
+
+      - name: Upload unsigned APK and report
+        uses: actions/upload-artifact@v4
+        with:
+          name: monthly-income-v1-unsigned
+          path: |
+            MonthlyIncomeCalculator_V1_unsigned.apk
+            MonthlyIncomeCalculator_V1_build_report.txt
+          if-no-files-found: error
+
+      - name: Prepare signer tools
+        shell: bash
+        run: |
+          BT="$ANDROID_HOME/build-tools/35.0.0"
+          mkdir -p signer-tools/lib
+          cp "$BT/apksigner" signer-tools/
+          cp "$BT/zipalign" signer-tools/
+          cp "$BT/aapt" signer-tools/
+          cp "$BT/lib/apksigner.jar" signer-tools/lib/
+          chmod +x signer-tools/apksigner signer-tools/zipalign signer-tools/aapt
+
+      - name: Upload signer tools
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-signer-tools-35-monthly-income
+          path: signer-tools
+          if-no-files-found: error
