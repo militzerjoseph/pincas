@@ -5,7 +5,7 @@
         android:allowBackup="false"
         android:hardwareAccelerated="true"
         android:icon="@drawable/ic_launcher"
-        android:label="מחשבון הכנסה חודשית"
+        android:label="מחשבון חדש"
         android:roundIcon="@drawable/ic_launcher"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
