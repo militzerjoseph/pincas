@@ -91,7 +91,7 @@ jobs:
           MAN=monthly-income-calculator/app/src/main/AndroidManifest.xml
           ! grep -q '<uses-permission' "$MAN"
           grep -q 'android:allowBackup="false"' "$MAN"
-          grep -q 'android:debuggable="false"' "$MAN"
+          ! grep -q 'android:debuggable=' "$MAN"
           grep -q 'android:usesCleartextTraffic="false"' "$MAN"
           grep -q "applicationId 'com.militzerjoseph.monthlyincome2'" monthly-income-calculator/app/build.gradle
           grep -q 'versionCode 1' monthly-income-calculator/app/build.gradle
@@ -109,6 +109,10 @@ jobs:
           "$BT/aapt" dump permissions "$APK" | tee apk-permissions.txt
           grep -q "package: name='com.militzerjoseph.monthlyincome2' versionCode='1' versionName='1.0'" apk-badging.txt
           grep -q "application-label:'מחשבון הכנסה חודשית'" apk-badging.txt
+          if grep -q 'application-debuggable' apk-badging.txt; then
+            echo 'Release APK is unexpectedly debuggable'
+            exit 1
+          fi
           if grep -q 'uses-permission:' apk-permissions.txt; then
             echo 'Unexpected permission found:'
             cat apk-permissions.txt
