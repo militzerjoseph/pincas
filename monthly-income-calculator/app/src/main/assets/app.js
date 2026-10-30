@@ -154,18 +154,20 @@ function backupApk() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  loadValues();
-  if (window.Android && typeof window.Android.getVersionName === 'function') {
-    try { document.getElementById('version').textContent = window.Android.getVersionName(); } catch (_) {}
-  }
-  document.getElementById('calculateBtn').addEventListener('click', calculateAndRender);
-  document.getElementById('backupBtn').addEventListener('click', backupApk);
-  for (const id of ['principal', 'annualRate', 'monthlyWithdrawal']) {
-    document.getElementById(id).addEventListener('change', saveValues);
-  }
-  calculateAndRender();
-});
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    loadValues();
+    if (window.Android && typeof window.Android.getVersionName === 'function') {
+      try { document.getElementById('version').textContent = window.Android.getVersionName(); } catch (_) {}
+    }
+    document.getElementById('calculateBtn').addEventListener('click', calculateAndRender);
+    document.getElementById('backupBtn').addEventListener('click', backupApk);
+    for (const id of ['principal', 'annualRate', 'monthlyWithdrawal']) {
+      document.getElementById(id).addEventListener('change', saveValues);
+    }
+    calculateAndRender();
+  });
+}
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { calculateModel };
