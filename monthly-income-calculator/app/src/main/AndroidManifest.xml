@@ -3,8 +3,6 @@
 
     <application
         android:allowBackup="false"
-        android:debuggable="false"
-        android:extractNativeLibs="false"
         android:hardwareAccelerated="true"
         android:icon="@drawable/ic_launcher"
         android:label="מחשבון הכנסה חודשית"
