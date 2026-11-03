@@ -27,6 +27,7 @@ import android.widget.Toast;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -35,7 +36,7 @@ public class MainActivity extends Activity {
 
     private static final String APP_URL = "https://script.google.com/macros/s/AKfycbyoJeN1G2EuGczP88itz2r2OKXH5GWL45c3ICe9L2kOHG2rNIFYJ98aRx0UPyZEIHyKxA/exec";
     private static final String BACKUP_SUBDIR = "גיבויים/פנקס מעטפת";
-    private static final String BACKUP_RELATIVE_DIR = Environment.DIRECTORY_DOWNLOADS + "/" + BACKUP_SUBDIR;
+    private static final String BACKUP_RELATIVE_DIR = Environment.DIRECTORY_DOWNLOADS + "/" + BACKUP_SUBDIR + "/";
     private static final int REQ_STORAGE = 501;
 
     private WebView webView;
@@ -71,13 +72,14 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                installDownloadInterceptor(view);
+                installNativeBackupOverride(view);
+                view.postDelayed(() -> installNativeBackupOverride(view), 700);
+                view.postDelayed(() -> installNativeBackupOverride(view), 1600);
             }
         });
         webView.setWebChromeClient(new WebChromeClient());
 
-        // Fallback for normal network downloads. The PINCAS backup itself is a
-        // programmatic blob download and is intercepted by JavaScript below.
+        // Fallback for any ordinary file downloads that the page may use.
         webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) -> {
             String fileName = URLUtil.guessFileName(url, contentDisposition, mimeType);
             if (fileName == null || fileName.trim().isEmpty() || fileName.startsWith("blob")) {
@@ -103,44 +105,33 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * PINCAS creates its backup with:
-     *   const b = new Blob(...)
-     *   a.href = URL.createObjectURL(b)
-     *   a.download = '...json'
-     *   a.click()
-     *
-     * Android WebView does not reliably forward a programmatic blob anchor click
-     * to DownloadListener. Intercept the anchor click inside the loaded page,
-     * convert the blob to a data URL and pass it directly to AndroidDownloads.
+     * The PINCAS page creates backup with a Blob and a programmatic a.click().
+     * Android WebView does not reliably deliver that as a download event.
+     * Replace the page backup() function with an equivalent function that sends
+     * the JSON text directly to Android. No Blob and no browser download are used.
      */
-    private void installDownloadInterceptor(WebView view) {
+    private void installNativeBackupOverride(WebView view) {
         String js =
-                "(function(){" +
-                "try{" +
-                "if(window.__pincasAndroidDownloadHook)return;" +
-                "window.__pincasAndroidDownloadHook=true;" +
-                "var originalClick=HTMLAnchorElement.prototype.click;" +
-                "HTMLAnchorElement.prototype.click=function(){" +
-                "try{" +
-                "var href=this.href||'';" +
-                "var name=this.download||'';" +
-                "if(name&&href.indexOf('blob:')===0){" +
-                "fetch(href).then(function(r){return r.blob();}).then(function(b){" +
-                "var fr=new FileReader();" +
-                "fr.onloadend=function(){try{AndroidDownloads.saveDataUrl(fr.result,name);}catch(e){console.error(e);}};" +
-                "fr.readAsDataURL(b);" +
-                "}).catch(function(e){console.error('PINCAS blob backup',e);});" +
-                "return;" +
-                "}" +
-                "if(name&&href.indexOf('data:')===0){" +
-                "AndroidDownloads.saveDataUrl(href,name);" +
-                "return;" +
-                "}" +
-                "}catch(e){console.error('PINCAS download interceptor',e);}" +
-                "return originalClick.apply(this,arguments);" +
-                "};" +
-                "}catch(e){console.error('PINCAS hook install',e);}" +
-                "})();";
+                "(function(){try{" +
+                "if(typeof d==='undefined' || typeof AndroidDownloads==='undefined')return;" +
+                "window.backup=function(){try{" +
+                "var now=new Date();" +
+                "var pad=function(n){return String(n).padStart(2,'0');};" +
+                "var stamp=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate())+'_'+pad(now.getHours())+'-'+pad(now.getMinutes());" +
+                "var backupData=Object.assign({},d,{_backupCreatedAt:now.toISOString()});" +
+                "var json=JSON.stringify(backupData,null,2);" +
+                "var fileName='גיבוי כרטסת הוצאות_'+stamp+'.json';" +
+                "AndroidDownloads.saveJson(json,fileName);" +
+                "d.lastBackupAt=now.toISOString();" +
+                "if(typeof save==='function')save();" +
+                "if(typeof updateBackupStatus==='function')updateBackupStatus();" +
+                "if(typeof showBackupToast==='function')showBackupToast(now);" +
+                "return false;" +
+                "}catch(e){console.error('PINCAS native backup',e);alert('שגיאה ביצירת הגיבוי: '+e);return false;}};" +
+                "var buttons=document.querySelectorAll('button[onclick*=\"backup()\"]');" +
+                "for(var i=0;i<buttons.length;i++){buttons[i].onclick=function(ev){if(ev){ev.preventDefault();ev.stopPropagation();}return window.backup();};}" +
+                "window.__pincasNativeBackupReady=true;" +
+                "}catch(e){console.error('PINCAS native backup install',e);}})();";
         view.evaluateJavascript(js, null);
     }
 
@@ -239,6 +230,24 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void saveJson(String json, String requestedFileName) {
+            try {
+                if (json == null || json.trim().isEmpty()) {
+                    throw new IllegalArgumentException("קובץ גיבוי ריק");
+                }
+                byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+                String fileName = sanitizeFileName(requestedFileName);
+                if (!fileName.toLowerCase(Locale.ROOT).endsWith(".json")) {
+                    fileName += ".json";
+                }
+                saveBytes(bytes, fileName, "application/json");
+                showSavedToast(fileName);
+            } catch (Exception e) {
+                showErrorToast(e);
+            }
+        }
+
+        @JavascriptInterface
         public void saveDataUrl(String dataUrl, String requestedFileName) {
             try {
                 if (dataUrl == null) throw new IllegalArgumentException("קובץ גיבוי ריק");
@@ -260,7 +269,7 @@ public class MainActivity extends Activity {
                 if (header.contains(";base64")) {
                     bytes = Base64.decode(body, Base64.DEFAULT);
                 } else {
-                    bytes = Uri.decode(body).getBytes("UTF-8");
+                    bytes = Uri.decode(body).getBytes(StandardCharsets.UTF_8);
                 }
 
                 String fileName = sanitizeFileName(requestedFileName);
@@ -273,28 +282,37 @@ public class MainActivity extends Activity {
                     else fileName += ".dat";
                 }
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    saveWithMediaStore(bytes, fileName, mimeType);
-                } else {
-                    if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                            != PackageManager.PERMISSION_GRANTED) {
-                        runOnUiThread(() -> requestPermissions(
-                                new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQ_STORAGE));
-                        throw new IllegalStateException("נא לאשר הרשאת אחסון וללחוץ שוב על גיבוי");
-                    }
-                    saveLegacy(bytes, fileName);
-                }
-
-                String finalName = fileName;
-                runOnUiThread(() -> Toast.makeText(MainActivity.this,
-                        "הגיבוי נשמר ב-Download/גיבויים/פנקס מעטפת/" + finalName,
-                        Toast.LENGTH_LONG).show());
-
+                saveBytes(bytes, fileName, mimeType);
+                showSavedToast(fileName);
             } catch (Exception e) {
-                runOnUiThread(() -> Toast.makeText(MainActivity.this,
-                        "שגיאה בשמירת הגיבוי: " + safeMessage(e),
-                        Toast.LENGTH_LONG).show());
+                showErrorToast(e);
             }
+        }
+
+        private void saveBytes(byte[] bytes, String fileName, String mimeType) throws Exception {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                saveWithMediaStore(bytes, fileName, mimeType);
+            } else {
+                if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                        != PackageManager.PERMISSION_GRANTED) {
+                    runOnUiThread(() -> requestPermissions(
+                            new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQ_STORAGE));
+                    throw new IllegalStateException("נא לאשר הרשאת אחסון וללחוץ שוב על גיבוי");
+                }
+                saveLegacy(bytes, fileName);
+            }
+        }
+
+        private void showSavedToast(String fileName) {
+            runOnUiThread(() -> Toast.makeText(MainActivity.this,
+                    "הגיבוי נשמר ב-Download/גיבויים/פנקס מעטפת/" + fileName,
+                    Toast.LENGTH_LONG).show());
+        }
+
+        private void showErrorToast(Exception e) {
+            runOnUiThread(() -> Toast.makeText(MainActivity.this,
+                    "שגיאה בשמירת הגיבוי: " + safeMessage(e),
+                    Toast.LENGTH_LONG).show());
         }
 
         private void saveWithMediaStore(byte[] bytes, String fileName, String mimeType) throws Exception {
