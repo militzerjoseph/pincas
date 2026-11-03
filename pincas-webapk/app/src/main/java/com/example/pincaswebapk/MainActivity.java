@@ -44,7 +44,6 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Preserve the exact appearance/behavior of the working wrapper.
         getWindow().setStatusBarColor(Color.WHITE);
         getWindow().setNavigationBarColor(Color.WHITE);
         getWindow().getDecorView().setSystemUiVisibility(
@@ -66,12 +65,19 @@ public class MainActivity extends Activity {
         settings.setSupportZoom(false);
         settings.setMediaPlaybackRequiresUserGesture(false);
 
-        webView.setWebViewClient(new WebViewClient());
+        webView.addJavascriptInterface(new DownloadBridge(this), "AndroidDownloads");
+
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                installDownloadInterceptor(view);
+            }
+        });
         webView.setWebChromeClient(new WebChromeClient());
 
-        // The original wrapper did not handle downloads. The web app creates
-        // backup files in the page; this listener saves them under Download.
-        webView.addJavascriptInterface(new DownloadBridge(this), "AndroidDownloads");
+        // Fallback for normal network downloads. The PINCAS backup itself is a
+        // programmatic blob download and is intercepted by JavaScript below.
         webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) -> {
             String fileName = URLUtil.guessFileName(url, contentDisposition, mimeType);
             if (fileName == null || fileName.trim().isEmpty() || fileName.startsWith("blob")) {
@@ -94,6 +100,48 @@ public class MainActivity extends Activity {
         } else {
             webView.restoreState(savedInstanceState);
         }
+    }
+
+    /**
+     * PINCAS creates its backup with:
+     *   const b = new Blob(...)
+     *   a.href = URL.createObjectURL(b)
+     *   a.download = '...json'
+     *   a.click()
+     *
+     * Android WebView does not reliably forward a programmatic blob anchor click
+     * to DownloadListener. Intercept the anchor click inside the loaded page,
+     * convert the blob to a data URL and pass it directly to AndroidDownloads.
+     */
+    private void installDownloadInterceptor(WebView view) {
+        String js =
+                "(function(){" +
+                "try{" +
+                "if(window.__pincasAndroidDownloadHook)return;" +
+                "window.__pincasAndroidDownloadHook=true;" +
+                "var originalClick=HTMLAnchorElement.prototype.click;" +
+                "HTMLAnchorElement.prototype.click=function(){" +
+                "try{" +
+                "var href=this.href||'';" +
+                "var name=this.download||'';" +
+                "if(name&&href.indexOf('blob:')===0){" +
+                "fetch(href).then(function(r){return r.blob();}).then(function(b){" +
+                "var fr=new FileReader();" +
+                "fr.onloadend=function(){try{AndroidDownloads.saveDataUrl(fr.result,name);}catch(e){console.error(e);}};" +
+                "fr.readAsDataURL(b);" +
+                "}).catch(function(e){console.error('PINCAS blob backup',e);});" +
+                "return;" +
+                "}" +
+                "if(name&&href.indexOf('data:')===0){" +
+                "AndroidDownloads.saveDataUrl(href,name);" +
+                "return;" +
+                "}" +
+                "}catch(e){console.error('PINCAS download interceptor',e);}" +
+                "return originalClick.apply(this,arguments);" +
+                "};" +
+                "}catch(e){console.error('PINCAS hook install',e);}" +
+                "})();";
+        view.evaluateJavascript(js, null);
     }
 
     private void saveBlobFromPage(String blobUrl, String fileName) {
